@@ -3,12 +3,17 @@ set(BAP_FRAMES_DIR ../../bap-frames)
 set(LIBTRACE_SOURCE_DIR "${BAP_FRAMES_DIR}/libtrace/src")
 set(PIQIFILE "${CMAKE_CURRENT_SOURCE_DIR}/${BAP_FRAMES_DIR}/piqi/frame.piqi")
 
-find_program(PIQI piqi REQUIRED)
-add_custom_command(
-	OUTPUT "frame.piqi.proto"
-	COMMAND "${PIQI}" to-proto "${PIQIFILE}" -o "${CMAKE_CURRENT_BINARY_DIR}/frame.piqi.proto"
-	MAIN_DEPENDENCY "${PIQIFILE}"
-	WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+find_program(PIQI piqi)
+if(PIQI)
+	add_custom_command(
+		OUTPUT "frame.piqi.proto"
+		COMMAND "${PIQI}" to-proto "${PIQIFILE}" -o "${CMAKE_CURRENT_BINARY_DIR}/frame.piqi.proto"
+		MAIN_DEPENDENCY "${PIQIFILE}"
+		WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+else()
+	message(WARNING "piqi not found, using prebuilt .proto file")
+	configure_file(../../piqi-prebuilt/frame.piqi.proto frame.piqi.proto COPYONLY)
+endif()
 
 find_package(Protobuf REQUIRED)
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS "${CMAKE_CURRENT_BINARY_DIR}/frame.piqi.proto")
