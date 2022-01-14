@@ -1,0 +1,3 @@
+[submodule "bap-frames"]
+	path = bap-frames
+	url = https://github.com/BinaryAnalysisPlatform/bap-frames.git
