@@ -30,17 +30,19 @@ private:
 enum class FrameCheckResult {
 	Success,
 	InvalidOp,
+	InvalidIL,
 	VMRuntimeError,
 	PostStateMismatch,
 	Unimplemented
 };
-#define FRAME_CHECK_RESULT_COUNT 5
+#define FRAME_CHECK_RESULT_COUNT 6
 
 class RizinEmulator {
 	private:
 		std::unique_ptr<RzCore, decltype(&rz_core_free)> core;
 		std::unique_ptr<RzReg, decltype(&rz_reg_free)> reg;
 		std::unique_ptr<RzAnalysisILVM, decltype(&rz_analysis_il_vm_free)> vm;
+		std::unique_ptr<RzILValidateGlobalContext, decltype(&rz_il_validate_global_context_free)> validate_ctx;
 
 	public:
 		RizinEmulator(const char *arch, const char *cpu, int bits);
@@ -99,6 +101,9 @@ int main(int argc, const char *argv[]) {
 		case FrameCheckResult::InvalidOp:
 			eprintf("         invalid op: ");
 			break;
+		case FrameCheckResult::InvalidIL:
+			eprintf("         invalid il: ");
+			break;
 		case FrameCheckResult::VMRuntimeError:
 			eprintf("   vm runtime error: ");
 			break;
@@ -118,7 +123,8 @@ int main(int argc, const char *argv[]) {
 RizinEmulator::RizinEmulator(const char *arch, const char *cpu, int bits) :
 		core(rz_core_new(), rz_core_free),
 		reg(rz_reg_new(), rz_reg_free),
-		vm(nullptr, rz_analysis_il_vm_free) {
+		vm(nullptr, rz_analysis_il_vm_free),
+		validate_ctx(nullptr, rz_il_validate_global_context_free) {
 	if (!core) {
 		throw RizinException("Failed to create RzCore.");
 	}
@@ -145,7 +151,10 @@ RizinEmulator::RizinEmulator(const char *arch, const char *cpu, int bits) :
 	if (!vm) {
 		throw RizinException("Failed to create IL vm.");
 	}
-	rz_analysis_il_vm_sync_to_reg(vm.get(), reg.get()); // initial sync to get any plugin-specified initialization
+	validate_ctx.reset(rz_il_validate_global_context_new_from_vm(vm->vm));
+	if (!validate_ctx) {
+		throw RizinException("Failed to derive validation context from IL VM.");
+	}
 }
 
 FrameCheckResult RizinEmulator::RunFrame(frame *f) {
@@ -204,6 +213,32 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 	}
 
 	//////////////////////////////////////////
+	// Check manually disassembled op
+
+	std::unique_ptr<RzAnalysisOp, std::function<void (RzAnalysisOp *)>> aop(rz_analysis_op_new(), [](RzAnalysisOp *op) {
+		rz_analysis_op_free(op);
+	});
+	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), (const ut8 *)code.data(), code.size(), RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
+		eprintf("rz_analysis_op() failed\n");
+		return FrameCheckResult::InvalidOp;
+	}
+	if (!aop->il_op) {
+		eprintf("analysis plugin did not lift to IL\n");
+		return FrameCheckResult::InvalidOp;
+	}
+	RzILValidateReport validate_report = nullptr;
+	if (!rz_il_validate_effect(aop->il_op, validate_ctx.get(), NULL, NULL, &validate_report)) {
+		RzStrBuf sb;
+		rz_strbuf_init(&sb);
+		rz_il_op_effect_stringify(aop->il_op, &sb);
+		eprintf("%s\n", rz_strbuf_get(&sb));
+		rz_strbuf_fini(&sb);
+		eprintf("Validation failed: %s\n", validate_report);
+		rz_mem_free(validate_report);
+		return FrameCheckResult::InvalidOp;
+	}
+
+	//////////////////////////////////////////
 	// Execute op
 
 	RzAnalysisILStepResult sr = rz_analysis_il_vm_step(core->analysis, vm.get(), reg.get());
@@ -229,6 +264,39 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 	// Compare results
 
 	bool mismatch = false;
+	auto mismatched = [&]() {
+		if (mismatch) {
+			return;
+		}
+		mismatch = true;
+		RzStrBuf sb;
+		rz_strbuf_init(&sb);
+		rz_il_op_effect_stringify(aop->il_op, &sb);
+		eprintf("%s\n\n", rz_strbuf_get(&sb));
+
+		auto print_operands = [](const operand_value_list &operands) {
+			for (const auto &o : operands.elem()) {
+				if (o.operand_info_specific().has_reg_operand()) {
+					const auto &ro = o.operand_info_specific().reg_operand();
+					RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RZ_MIN(o.value().size() * 8, o.bit_length()));
+					char *ts = rz_bv_as_hex_string(tbv, true);
+					eprintf("  %s : %u = %s\n", ro.name().c_str(), (unsigned int)o.bit_length(), ts);
+					rz_mem_free(ts);
+				} else if (o.operand_info_specific().has_mem_operand()) {
+					const auto &mo = o.operand_info_specific().mem_operand();
+					char *hex = rz_hex_bin2strdup((const ut8 *)o.value().data(), o.value().size());
+					eprintf("  [0x%04" PFMT64x "] = %s\n", (ut64)mo.address(), hex);
+				}
+			}
+		};
+		eprintf(Color_GREEN "PRE-OPERANDS EXPECTED:" Color_RESET "\n");
+		print_operands(sf.operand_pre_list());
+		eprintf(Color_GREEN "POST-OPERANDS EXPECTED:" Color_RESET "\n");
+		print_operands(sf.operand_post_list());
+		eprintf("\n");
+
+		rz_strbuf_fini(&sb);
+	};
 
 	// trace -> vm: check that every post-operand is correctly represented in the vm
 	for (const auto &o : sf.operand_post_list().elem()) {
@@ -242,7 +310,7 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RZ_MIN(o.value().size() * 8, o.bit_length()));
 			RzBitVector *rbv = rz_reg_get_bv(reg.get(), ri);
 			if (!rz_bv_eq(tbv, rbv)) {
-				mismatch = true;
+				mismatched();
 				char *ts = rz_bv_as_hex_string(tbv, true);
 				char *rs = rz_bv_as_hex_string(rbv, true);
 				eprintf(Color_RED "MISMATCH" Color_RESET " post-register:\n");
@@ -263,6 +331,10 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 
 	// vm -> trace: try to find a valid explanation in the trace for every part of the vm state
 	// TODO
+
+	if (mismatch) {
+		eprintf("\n");
+	}
 	return mismatch ? FrameCheckResult::PostStateMismatch : FrameCheckResult::Success;
 }
 
