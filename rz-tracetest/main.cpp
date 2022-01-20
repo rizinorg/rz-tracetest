@@ -168,18 +168,20 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 	const std_frame &sf = f->std_frame();
 	const std::string &code = sf.rawbytes();
 
-	eprintf(Color_BCYAN "-- 0x%08" PFMT64x "    ", (ut64)sf.address());
-	RzAsmOp asmop = {};
-	core->rasm->pc = sf.address();
-	if (rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) > 0) {
-		char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
-		eprintf("%-16s    %s", hex, rz_strbuf_get(&asmop.buf_asm));
-		free(hex);
-	} else {
-		eprintf("?");
-	}
-	eprintf(Color_RESET "\n");
-	rz_asm_op_fini(&asmop);
+	auto print_disasm = [&]() {
+		eprintf(Color_BCYAN "-- 0x%08" PFMT64x "    ", (ut64)sf.address());
+		RzAsmOp asmop = {};
+		core->rasm->pc = sf.address();
+		if (rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) > 0) {
+			char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
+			eprintf("%-16s    %s", hex, rz_strbuf_get(&asmop.buf_asm));
+			free(hex);
+		} else {
+			eprintf("?");
+		}
+		eprintf(Color_RESET "\n");
+		rz_asm_op_fini(&asmop);
+	};
 
 	//////////////////////////////////////////
 	// Set up pre-state
@@ -270,6 +272,7 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 		if (mismatch) {
 			return;
 		}
+		print_disasm();
 		mismatch = true;
 		RzStrBuf sb;
 		rz_strbuf_init(&sb);
@@ -284,6 +287,18 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 					char *ts = rz_bv_as_hex_string(tbv, true);
 					eprintf("  %s : %u = %s\n", ro.name().c_str(), (unsigned int)o.bit_length(), ts);
 					rz_mem_free(ts);
+					if (!strcmp(ro.name().c_str(), "sr") && o.value().size()) {
+						// TODO: generalize this for other archs too
+						ut8 sr = o.value().data()[0];
+						eprintf("    0  %#04x  C  = %d\n", 1 << 0, (sr & (1 << 0)) != 0);
+						eprintf("    1  %#04x  Z  = %d\n", 1 << 1, (sr & (1 << 1)) != 0);
+						eprintf("    2  %#04x  I  = %d\n", 1 << 2, (sr & (1 << 2)) != 0);
+						eprintf("    3  %#04x  D  = %d\n", 1 << 3, (sr & (1 << 3)) != 0);
+						eprintf("    4  %#04x (B) = %d\n", 1 << 4, (sr & (1 << 4)) != 0);
+						eprintf("    5  %#04x     = %d\n", 1 << 5, (sr & (1 << 5)) != 0);
+						eprintf("    6  %#04x  V  = %d\n", 1 << 6, (sr & (1 << 6)) != 0);
+						eprintf("    7  %#04x  N  = %d\n", 1 << 7, (sr & (1 << 7)) != 0);
+					}
 				} else if (o.operand_info_specific().has_mem_operand()) {
 					const auto &mo = o.operand_info_specific().mem_operand();
 					char *hex = rz_hex_bin2strdup((const ut8 *)o.value().data(), o.value().size());
@@ -311,6 +326,12 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 			}
 			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RZ_MIN(o.value().size() * 8, o.bit_length()));
 			RzBitVector *rbv = rz_reg_get_bv(reg.get(), ri);
+			if (!strcmp(ro.name().c_str(), "sr") && o.value().size()) {
+				// TODO: generalize this for other archs too
+				// mask out the unused bit for 6502
+				rz_bv_set(tbv, 5, false);
+				rz_bv_set(rbv, 5, false);
+			}
 			if (!rz_bv_eq(tbv, rbv)) {
 				mismatched();
 				char *ts = rz_bv_as_hex_string(tbv, true);
