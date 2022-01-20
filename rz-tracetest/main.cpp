@@ -172,7 +172,9 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 	RzAsmOp asmop = {};
 	core->rasm->pc = sf.address();
 	if (rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) > 0) {
-		eprintf("%s", rz_strbuf_get(&asmop.buf_asm));
+		char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
+		eprintf("%-16s    %s", hex, rz_strbuf_get(&asmop.buf_asm));
+		free(hex);
 	} else {
 		eprintf("?");
 	}
@@ -289,7 +291,7 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 				}
 			}
 		};
-		eprintf(Color_GREEN "PRE-OPERANDS EXPECTED:" Color_RESET "\n");
+		eprintf(Color_GREEN "PRE-OPERANDS:" Color_RESET "\n");
 		print_operands(sf.operand_pre_list());
 		eprintf(Color_GREEN "POST-OPERANDS EXPECTED:" Color_RESET "\n");
 		print_operands(sf.operand_post_list());
