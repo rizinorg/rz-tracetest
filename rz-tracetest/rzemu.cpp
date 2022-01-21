@@ -193,6 +193,18 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 		print_operands(sf.operand_post_list());
 		printf("\n");
 
+		printf(Color_GREEN "IL EVENTS:" Color_RESET "\n");
+		RzListIter *it;
+		void *evtp;
+		rz_list_foreach (vm->vm->events, it, evtp) {
+			RzStrBuf sb;
+			rz_strbuf_init(&sb);
+			rz_il_event_stringify((RzILEvent *)evtp, &sb);
+			printf("  %s\n", rz_strbuf_get(&sb));
+			rz_strbuf_fini(&sb);
+		}
+		printf("\n");
+
 		rz_strbuf_fini(&sb);
 	};
 
