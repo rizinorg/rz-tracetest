@@ -7,7 +7,9 @@ find_package(Rizin REQUIRED Core)
 add_subdirectory(libtrace)
 
 set(SOURCE
-	main.cpp)
+	main.cpp
+	rzemu.cpp
+	rzemu.h)
 
 add_executable(rz-tracetest ${SOURCE})
 target_link_libraries(rz-tracetest Rizin::Core trace)
