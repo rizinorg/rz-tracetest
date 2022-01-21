@@ -46,7 +46,7 @@ class RizinEmulator {
 
 	public:
 		RizinEmulator(const char *arch, const char *cpu, int bits);
-		FrameCheckResult RunFrame(frame *f);
+		FrameCheckResult RunFrame(ut64 index, frame *f);
 		const char *RegTraceToRizin(const char *tracereg);
 };
 
@@ -87,7 +87,7 @@ int main(int argc, const char *argv[]) {
 	trace.seek(offset);
 	ut64 stats[FRAME_CHECK_RESULT_COUNT] = {};
 	while (!trace.end_of_trace() && !rz_cons_is_breaked() && count) {
-		auto res = r.RunFrame(trace.get_frame().get());
+		auto res = r.RunFrame(offset++, trace.get_frame().get());
 		stats[static_cast<int>(res)]++;
 		count--;
 	}
@@ -157,7 +157,7 @@ RizinEmulator::RizinEmulator(const char *arch, const char *cpu, int bits) :
 	}
 }
 
-FrameCheckResult RizinEmulator::RunFrame(frame *f) {
+FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 	if (!f->has_std_frame()) {
 		eprintf("Non-std frame, can't deal with this (yet)\n");
 		return FrameCheckResult::Unimplemented;
@@ -169,7 +169,7 @@ FrameCheckResult RizinEmulator::RunFrame(frame *f) {
 	const std::string &code = sf.rawbytes();
 
 	auto print_disasm = [&]() {
-		eprintf(Color_BCYAN "-- 0x%08" PFMT64x "    ", (ut64)sf.address());
+		eprintf(Color_BCYAN "-- %5" PFMT64u "     0x%08" PFMT64x "    ", index, (ut64)sf.address());
 		RzAsmOp asmop = {};
 		core->rasm->pc = sf.address();
 		if (rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) > 0) {
