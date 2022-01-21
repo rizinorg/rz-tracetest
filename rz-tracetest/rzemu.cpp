@@ -38,6 +38,19 @@ RizinEmulator::RizinEmulator(const char *arch, const char *cpu, int bits) :
 	}
 }
 
+static ut32 RegOperandSizeBits(const operand_info &o) {
+	assert(o.operand_info_specific().has_reg_operand());
+	return RZ_MIN(o.value().size() * 8, o.bit_length());
+}
+
+static ut64 MemOperandSizeBytes(const operand_info &o) {
+	assert(o.operand_info_specific().has_mem_operand());
+	if (o.bit_length() % 8 != 0) {
+		printf("Bit length of mem operand not byte-aligned\n");
+	}
+	return RZ_MIN(o.value().size(), o.bit_length() / 8);
+}
+
 FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 	if (!f->has_std_frame()) {
 		printf("Non-std frame, can't deal with this (yet)\n");
@@ -82,15 +95,12 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 				printf("Unknown reg: %s\n", ro.name().c_str());
 				continue;
 			}
-			RzBitVector *bv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RZ_MIN(o.value().size() * 8, o.bit_length()));
+			RzBitVector *bv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
 			rz_reg_set_bv(reg.get(), ri, bv);
 			rz_bv_free(bv);
 		} else if (o.operand_info_specific().has_mem_operand()) {
 			const auto &mo = o.operand_info_specific().mem_operand();
-			if (o.bit_length() % 8 != 0) {
-				printf("Bit length of mem operand not byte-aligned\n");
-			}
-			rz_io_write_at(io, mo.address(), (const ut8 *)o.value().data(), RZ_MIN(o.value().size(), o.bit_length() / 8));
+			rz_io_write_at(io, mo.address(), (const ut8 *)o.value().data(), MemOperandSizeBytes(o));
 		} else {
 			printf("No or unknown operand type\n");
 			return FrameCheckResult::Unimplemented;
@@ -238,14 +248,27 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 			rz_bv_free(tbv);
 			rz_bv_free(rbv);
 		} else if (o.operand_info_specific().has_mem_operand()) {
-			// TODO
+			const auto &mo = o.operand_info_specific().mem_operand();
+			ut64 size = MemOperandSizeBytes(o);
+			std::vector<ut8> actual(size);
+			rz_io_read_at(io, mo.address(), actual.data(), size);
+			if (memcmp(actual.data(), o.value().data(), size)) {
+				mismatched();
+				char *ts = rz_hex_bin2strdup((const ut8 *)o.value().data(), size);
+				char *rs = rz_hex_bin2strdup(actual.data(), size);
+				printf(Color_RED "MISMATCH" Color_RESET " post-memory:\n");
+				printf("  expected [0x%04" PFMT64x "] = %s\n", (ut64)mo.address(), ts);
+				printf("  got      [0x%04" PFMT64x "] = %s\n", (ut64)mo.address(), rs);
+				rz_mem_free(ts);
+				rz_mem_free(rs);
+			}
 		} else {
 			printf("No or unknown operand type\n");
 			return FrameCheckResult::Unimplemented;
 		}
 	}
 
-	// vm -> trace: try to find a valid explanation in the trace for every part of the vm state
+	// vm -> trace: try to find a valid explanation in the trace for every event that happened
 	// TODO
 
 	if (mismatch) {
