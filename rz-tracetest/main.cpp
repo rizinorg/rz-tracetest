@@ -61,7 +61,7 @@ int main(int argc, const char *argv[]) {
 		count--;
 	}
 
-	printf("\n\n---------------------------------\n");
+	printf("\n---------------------------------\n");
 	for (int i = 0; i < FRAME_CHECK_RESULT_COUNT; i++) {
 		switch (static_cast<FrameCheckResult>(i)) {
 		case FrameCheckResult::Success:

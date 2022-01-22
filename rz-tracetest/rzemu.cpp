@@ -62,19 +62,31 @@ static void PrintEvent(ut64 index, const RzILEvent *ev) {
 static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const operand_value_list &operands) {
 	ut64 addr = rz_bv_to_ut64(address);
 	ut64 size = (bits + 7) / 8; // round IL accesses up to be on the safe side
-	for (const auto &o : operands.elem()) {
-		if (!o.operand_info_specific().has_mem_operand()) {
-			continue;
+	bool improved = false; // whether a new piece of the access was justified in the last iteration
+	do {
+		for (const auto &o : operands.elem()) {
+			if (!o.operand_info_specific().has_mem_operand()) {
+				continue;
+			}
+			ut64 oaddr = o.operand_info_specific().mem_operand().address();
+			ut64 osize = o.bit_length() / 8;
+			if (addr >= oaddr && addr + size <= oaddr + osize) {
+				// fully contained
+				return true;
+			}
+			// check for partial overlap
+			if (addr >= oaddr && addr < oaddr + osize) {
+				// our chunk begins inside the operand, so its head is justified and can be chopped off
+				size = (addr + size) - (oaddr + osize);
+				addr = oaddr + osize;
+				improved = true;
+			} else if (addr + size >= oaddr && addr + size < oaddr + osize) {
+				// our chunk ends inside the operand, so its tail is justified and can be chopped off
+				size = (oaddr + osize) - addr;
+				improved = true;
+			}
 		}
-		ut64 oaddr = o.operand_info_specific().mem_operand().address();
-		// At the moment, we consider a memory access only justified if it is contained within a single
-		// operand. If e.g. multiple contiguous operands contain a single IL access, this will result
-		// in a false positive mismatch.
-		// So this can be refined if necessary for other archs in the future:
-		if (addr >= oaddr && addr + size <= oaddr + o.bit_length() / 8) {
-			return true;
-		}
-	}
+	} while (improved);
 	return false;
 }
 
