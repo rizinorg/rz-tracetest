@@ -37,7 +37,9 @@ class VICETraceAdapter : public TraceAdapter
 			if (tracename == "sr") {
 				// mask out the unused and break bits, which rizin does not represent
 				rz_bv_set(trace_val, 5, false);
+				rz_bv_set(trace_val, 4, false);
 				rz_bv_set(rizin_val, 5, false);
+				rz_bv_set(rizin_val, 4, false);
 			}
 		}
 
