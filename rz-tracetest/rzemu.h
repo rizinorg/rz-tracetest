@@ -57,7 +57,7 @@ class RizinEmulator {
 
 	public:
 		RizinEmulator(std::unique_ptr<TraceAdapter> adapter);
-		FrameCheckResult RunFrame(ut64 index, frame *f);
+		FrameCheckResult RunFrame(ut64 index, frame *f, bool invalid_op_quiet);
 };
 
 #endif

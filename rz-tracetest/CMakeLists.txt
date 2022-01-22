@@ -15,3 +15,4 @@ set(SOURCE
 
 add_executable(rz-tracetest ${SOURCE})
 target_link_libraries(rz-tracetest Rizin::Core trace)
+install(TARGETS rz-tracetest)

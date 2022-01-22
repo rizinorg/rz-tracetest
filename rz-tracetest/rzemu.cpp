@@ -93,7 +93,7 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 	return false;
 }
 
-FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
+FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_quiet) {
 	if (!f->has_std_frame()) {
 		printf("Non-std frame, can't deal with this (yet)\n");
 		return FrameCheckResult::Unimplemented;
@@ -161,13 +161,17 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 		rz_analysis_op_free(op);
 	});
 	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), (const ut8 *)code.data(), code.size(), RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
-		print_disasm();
-		printf("rz_analysis_op() failed\n");
+		if (!invalid_op_quiet) {
+			print_disasm();
+			printf("rz_analysis_op() failed\n");
+		}
 		return FrameCheckResult::InvalidOp;
 	}
 	if (!aop->il_op) {
-		print_disasm();
-		printf("analysis plugin did not lift to IL\n");
+		if (!invalid_op_quiet) {
+			print_disasm();
+			printf("analysis plugin did not lift to IL\n");
+		}
 		return FrameCheckResult::InvalidOp;
 	}
 	RzILValidateReport validate_report = nullptr;
