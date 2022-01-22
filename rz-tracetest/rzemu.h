@@ -51,7 +51,8 @@ class RizinEmulator {
 	public:
 		RizinEmulator(const char *arch, const char *cpu, int bits);
 		FrameCheckResult RunFrame(ut64 index, frame *f);
-		const char *RegTraceToRizin(const char *tracereg);
+		const char *TraceRegToRizin(const char *tracereg);
+		bool TraceRegCoversILVar(const char *tracereg, const char *var);
 };
 
 #endif
