@@ -52,3 +52,13 @@ contained instructions and print mismatches between the trace and RzIL if found:
 ```
 rz-tracetest mytrace.frames
 ```
+
+Adjustments to specific Archs/Sources/...
+-----------------------------------------
+
+In many cases, data given in the trace does not directly map to Rizin. For
+example, the arch plugin name must be determined and register names might
+differ.
+These adjustments, which are in general specific to a certain architecture or
+trace source, are performed by implementing the `TraceAdapter` interface. See
+`VICETraceAdapter` for an example.

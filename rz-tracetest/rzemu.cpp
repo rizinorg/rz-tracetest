@@ -1,7 +1,8 @@
 
 #include "rzemu.h"
 
-RizinEmulator::RizinEmulator(const char *arch, const char *cpu, int bits) :
+RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg) :
+		adapter(std::move(adapter_arg)),
 		core(rz_core_new(), rz_core_free),
 		reg(rz_reg_new(), rz_reg_free),
 		vm(nullptr, rz_analysis_il_vm_free),
@@ -12,10 +13,12 @@ RizinEmulator::RizinEmulator(const char *arch, const char *cpu, int bits) :
 	if (!reg) {
 		throw RizinException("Failed to create RzReg.");
 	}
-	rz_config_set(core->config, "asm.arch", arch);
-	if (cpu) {
-		rz_config_set(core->config, "asm.cpu", cpu);
+	rz_config_set(core->config, "asm.arch", adapter->RizinArch().c_str());
+	auto cpu = adapter->RizinCPU();
+	if (!cpu.empty()) {
+		rz_config_set(core->config, "asm.cpu", cpu.c_str());
 	}
+	int bits = adapter->RizinBits();
 	if (bits) {
 		rz_config_set_i(core->config, "asm.bits", bits);
 	}
@@ -134,7 +137,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 	for (const auto &o : sf.operand_pre_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
-			RzRegItem *ri = rz_reg_get(reg.get(), TraceRegToRizin(ro.name().c_str()), RZ_REG_TYPE_ANY);
+			RzRegItem *ri = rz_reg_get(reg.get(), adapter->TraceRegToRizin(ro.name()).c_str(), RZ_REG_TYPE_ANY);
 			if (!ri) {
 				printf("Unknown reg: %s\n", ro.name().c_str());
 				continue;
@@ -216,26 +219,16 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 		rz_il_op_effect_stringify(aop->il_op, &sb);
 		printf("%s\n\n", rz_strbuf_get(&sb));
 
-		auto print_operands = [](const operand_value_list &operands) {
+		auto print_operands = [this](const operand_value_list &operands) {
 			for (const auto &o : operands.elem()) {
 				if (o.operand_info_specific().has_reg_operand()) {
 					const auto &ro = o.operand_info_specific().reg_operand();
-					RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RZ_MIN(o.value().size() * 8, o.bit_length()));
+					size_t real_bits = RZ_MIN(o.value().size() * 8, o.bit_length());
+					RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, real_bits);
 					char *ts = rz_bv_as_hex_string(tbv, true);
 					printf("  %s : %u = %s\n", ro.name().c_str(), (unsigned int)o.bit_length(), ts);
 					rz_mem_free(ts);
-					if (!strcmp(ro.name().c_str(), "sr") && o.value().size()) {
-						// TODO: generalize this for other archs too
-						ut8 sr = o.value().data()[0];
-						printf("    0  %#04x  C  = %d\n", 1 << 0, (sr & (1 << 0)) != 0);
-						printf("    1  %#04x  Z  = %d\n", 1 << 1, (sr & (1 << 1)) != 0);
-						printf("    2  %#04x  I  = %d\n", 1 << 2, (sr & (1 << 2)) != 0);
-						printf("    3  %#04x  D  = %d\n", 1 << 3, (sr & (1 << 3)) != 0);
-						printf("    4  %#04x (B) = %d\n", 1 << 4, (sr & (1 << 4)) != 0);
-						printf("    5  %#04x     = %d\n", 1 << 5, (sr & (1 << 5)) != 0);
-						printf("    6  %#04x  V  = %d\n", 1 << 6, (sr & (1 << 6)) != 0);
-						printf("    7  %#04x  N  = %d\n", 1 << 7, (sr & (1 << 7)) != 0);
-					}
+					adapter->PrintRegisterDetails(ro.name(), o.value(), real_bits);
 				} else if (o.operand_info_specific().has_mem_operand()) {
 					const auto &mo = o.operand_info_specific().mem_operand();
 					char *hex = rz_hex_bin2strdup((const ut8 *)o.value().data(), o.value().size());
@@ -277,19 +270,14 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 	for (const auto &o : sf.operand_post_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
-			RzRegItem *ri = rz_reg_get(reg.get(), TraceRegToRizin(ro.name().c_str()), RZ_REG_TYPE_ANY);
+			RzRegItem *ri = rz_reg_get(reg.get(), adapter->TraceRegToRizin(ro.name()).c_str(), RZ_REG_TYPE_ANY);
 			if (!ri) {
 				printf("Unknown reg: %s\n", ro.name().c_str());
 				continue;
 			}
 			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RZ_MIN(o.value().size() * 8, o.bit_length()));
 			RzBitVector *rbv = rz_reg_get_bv(reg.get(), ri);
-			if (!strcmp(ro.name().c_str(), "sr") && o.value().size()) {
-				// TODO: generalize this for other archs too
-				// mask out the unused bit for 6502
-				rz_bv_set(tbv, 5, false);
-				rz_bv_set(rbv, 5, false);
-			}
+			adapter->AdjustRegContents(ro.name(), tbv, rbv); 
 			if (ri == pc_ri) {
 				pc_tracename = ro.name();
 				pc_expect = rz_bv_to_ut64(tbv);
@@ -409,18 +397,6 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 	return mismatch ? FrameCheckResult::PostStateMismatch : FrameCheckResult::Success;
 }
 
-/**
- * Get the name of the register in RzReg for a reg name given by the trace
- */
-const char *RizinEmulator::TraceRegToRizin(const char *tracereg) {
-	// This can be done nicer with some declarative tables when more mapping is needed
-	const char *arch = rz_config_get(core->config, "asm.arch");
-	if (!strcmp(arch, "6502") && !strcmp(tracereg, "sr")) {
-		return "flags";
-	}
-	return tracereg;
-}
-
 static bool RegIsBound(RzILRegBinding *rb, const char *var) {
 	for (size_t i = 0; i < rb->regs_count; i++) {
 		RzILRegBindingItem *rbi = &rb->regs[i];
@@ -435,15 +411,15 @@ static bool RegIsBound(RzILRegBinding *rb, const char *var) {
  * Check if the global IL variable \p var is contained inside the RzReg register corresponding to the given trace register name
  */
 bool RizinEmulator::TraceRegCoversILVar(const char *tracereg, const char *var) {
-	const char *rzreg = TraceRegToRizin(tracereg);
-	RzRegItem *ri = rz_reg_get(reg.get(), rzreg, RZ_REG_TYPE_ANY);
+	std::string rzreg = adapter->TraceRegToRizin(tracereg);
+	RzRegItem *ri = rz_reg_get(reg.get(), rzreg.c_str(), RZ_REG_TYPE_ANY);
 	if (!ri) {
 		return false;
 	}
 	if (!RegIsBound(vm->reg_binding, var)) {
 		return false;
 	}
-	if (!strcmp(rzreg, var)) {
+	if (rzreg == var) {
 		return true;
 	}
 	RzRegItem *vi = rz_reg_get(reg.get(), var, RZ_REG_TYPE_ANY);

@@ -1,17 +1,6 @@
 
 #include "rzemu.h"
 
-static const char *MatchRizinArch(frame_architecture arch) {
-	switch (arch) {
-	case frame_arch_arm:
-		return "arm";
-	case frame_arch_6502:
-		return "6502";
-	default:
-		return nullptr;
-	}
-}
-
 static int help(bool verbose) {
 	printf("Usage: rz-tracetest [-c count] [-o offset] <filename>.frames\n");
 	if (verbose) {
@@ -47,12 +36,11 @@ int main(int argc, const char *argv[]) {
 	}
 
 	SerializedTrace::TraceContainerReader trace(argv[opt.ind]);
-	auto arch = trace.get_arch();
-	auto rarch = MatchRizinArch(arch);
-	if (!rarch) {
-		throw RizinException("Failed to match frame_architecture %d to Rizin architecture.\n", (int)arch);
+	auto adapter = SelectTraceAdapter(trace.get_arch());
+	if (!adapter) {
+		throw RizinException("Failed to match frame_architecture %d to TraceAdapter.\n", (int)trace.get_arch());
 	}
-	RizinEmulator r(rarch, nullptr, 0);
+	RizinEmulator r(std::move(adapter));
 	trace.seek(offset);
 	ut64 stats[FRAME_CHECK_RESULT_COUNT] = {};
 	while (!trace.end_of_trace() && !rz_cons_is_breaked() && count) {

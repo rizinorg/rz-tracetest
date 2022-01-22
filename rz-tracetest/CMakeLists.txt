@@ -9,7 +9,9 @@ add_subdirectory(libtrace)
 set(SOURCE
 	main.cpp
 	rzemu.cpp
-	rzemu.h)
+	rzemu.h
+	adapter.h
+	adapter.cpp)
 
 add_executable(rz-tracetest ${SOURCE})
 target_link_libraries(rz-tracetest Rizin::Core trace)
