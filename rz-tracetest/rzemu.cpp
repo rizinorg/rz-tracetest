@@ -101,7 +101,12 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 	const std_frame &sf = f->std_frame();
 	const std::string &code = sf.rawbytes();
 
+	bool disasm_printed = false;
 	auto print_disasm = [&]() {
+		if (disasm_printed) {
+			return;
+		}
+		disasm_printed = true;
 		printf(Color_BCYAN "-- %5" PFMT64u "     0x%08" PFMT64x "    ", index, (ut64)sf.address());
 		RzAsmOp asmop = {};
 		core->rasm->pc = sf.address();
@@ -153,10 +158,12 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f) {
 		rz_analysis_op_free(op);
 	});
 	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), (const ut8 *)code.data(), code.size(), RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
+		print_disasm();
 		printf("rz_analysis_op() failed\n");
 		return FrameCheckResult::InvalidOp;
 	}
 	if (!aop->il_op) {
+		print_disasm();
 		printf("analysis plugin did not lift to IL\n");
 		return FrameCheckResult::InvalidOp;
 	}
