@@ -4,7 +4,10 @@ RUN sed -i 's/^# *deb-src/deb-src/g' /etc/apt/sources.list
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
 RUN apt-get --no-install-recommends -y build-dep qemu
-RUN apt-get -y install autoconf libtool protobuf-c-compiler libprotobuf-c-dev git python opam gcc-arm-linux-gnueabihf
+RUN apt-get -y install autoconf libtool protobuf-c-compiler libprotobuf-c-dev git python opam \
+	gcc-arm-linux-gnueabi \
+	gcc-arm-linux-gnueabihf \
+	gcc-aarch64-linux-gnu
 RUN opam init -a
 RUN opam install -y piqi
 
