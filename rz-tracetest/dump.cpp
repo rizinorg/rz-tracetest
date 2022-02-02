@@ -5,7 +5,7 @@
 
 static void DumpStdFrame(const std_frame &frame, ut64 index);
 
-void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 count) {
+void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 count, int verbose) {
 	const meta_frame *meta = trace.get_meta();
 	printf("META:\n%s\n======================================\n\n", meta->DebugString().c_str());
 
@@ -15,7 +15,8 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 		auto frame = trace.get_frame();
 		if (frame->has_std_frame()) {
 			DumpStdFrame(frame->std_frame(), index);
-		} else {
+		}
+		if (!frame->has_std_frame() || verbose) {
 			printf("%" PFMT64u " = %s\n", index, frame->DebugString().c_str());
 		}
 		index++;

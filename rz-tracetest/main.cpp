@@ -5,13 +5,14 @@
 #include "dump.h"
 
 static int help(bool verbose) {
-	printf("Usage: rz-tracetest [-dhi] [-c count] [-o offset] <filename>.frames\n");
+	printf("Usage: rz-tracetest [-dhiv] [-c count] [-o offset] <filename>.frames\n");
 	if (verbose) {
 		printf(" -c [count]    number of frames to check, default: all\n");
 		printf(" -d            dump trace as text, but do not run or test anything\n");
 		printf(" -h            show help message\n");
 		printf(" -i            do not print unlifted instructions verbosely\n");
 		printf(" -o [offset]   index of the first frame to check, default: 0\n");
+		printf(" -v            be more verbose\n");
 	}
 	return 1;
 }
@@ -21,9 +22,10 @@ int main(int argc, const char *argv[]) {
 	ut64 offset = 0;
 	bool invalid_op_quiet = false;
 	bool dump_only = false;
+	int verbose = 0;
 
 	RzGetopt opt;
-	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:id");
+	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idv");
 	int c;
 	while ((c = rz_getopt_next(&opt)) != -1) {
 		switch (c) {
@@ -41,6 +43,9 @@ int main(int argc, const char *argv[]) {
 		case 'd':
 			dump_only = true;
 			break;
+		case 'v':
+			verbose++;
+			break;
 		default:
 			return help(false);
 		}
@@ -51,7 +56,7 @@ int main(int argc, const char *argv[]) {
 
 	SerializedTrace::TraceContainerReader trace(argv[opt.ind]);
 	if (dump_only) {
-		DumpTrace(trace, offset, count);
+		DumpTrace(trace, offset, count, verbose);
 		return 0;
 	}
 	auto adapter = SelectTraceAdapter(trace.get_arch());
