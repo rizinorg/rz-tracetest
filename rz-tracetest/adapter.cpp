@@ -63,10 +63,19 @@ class VICETraceAdapter : public TraceAdapter
 		}
 };
 
+class ARMTraceAdapter : public TraceAdapter
+{
+	public:
+		std::string RizinArch() const override { return "arm"; }
+		int RizinBits() const override { return 32; } // TODO: thumb (16)
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 		case frame_arch_6502:
 			return std::unique_ptr<TraceAdapter>(new VICETraceAdapter());
+		case frame_arch_arm:
+			return std::unique_ptr<TraceAdapter>(new ARMTraceAdapter());
 		default:
 			return nullptr;
 	}
