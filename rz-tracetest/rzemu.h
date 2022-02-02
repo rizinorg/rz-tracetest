@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2022 Florian Märkl <info@florianmaerkl.de>
+// SPDX-License-Identifier: LGPL-3.0-only
 
 #ifndef _RZEMU_H
 #define _RZEMU_H

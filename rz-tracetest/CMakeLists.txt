@@ -11,7 +11,9 @@ set(SOURCE
 	rzemu.cpp
 	rzemu.h
 	adapter.h
-	adapter.cpp)
+	adapter.cpp
+	dump.h
+	dump.cpp)
 
 add_executable(rz-tracetest ${SOURCE})
 target_link_libraries(rz-tracetest Rizin::Core trace)

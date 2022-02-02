@@ -1,12 +1,17 @@
+// SPDX-FileCopyrightText: 2022 Florian Märkl <info@florianmaerkl.de>
+// SPDX-License-Identifier: LGPL-3.0-only
 
 #include "rzemu.h"
+#include "dump.h"
 
 static int help(bool verbose) {
-	printf("Usage: rz-tracetest [-i] [-c count] [-o offset] <filename>.frames\n");
+	printf("Usage: rz-tracetest [-dhi] [-c count] [-o offset] <filename>.frames\n");
 	if (verbose) {
 		printf(" -c [count]    number of frames to check, default: all\n");
-		printf(" -o [offset]   index of the first frame to check, default: 0\n");
+		printf(" -d            dump trace as text, but do not run or test anything\n");
+		printf(" -h            show help message\n");
 		printf(" -i            do not print unlifted instructions verbosely\n");
+		printf(" -o [offset]   index of the first frame to check, default: 0\n");
 	}
 	return 1;
 }
@@ -15,9 +20,10 @@ int main(int argc, const char *argv[]) {
 	ut64 count = UT64_MAX;
 	ut64 offset = 0;
 	bool invalid_op_quiet = false;
+	bool dump_only = false;
 
 	RzGetopt opt;
-	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:i");
+	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:id");
 	int c;
 	while ((c = rz_getopt_next(&opt)) != -1) {
 		switch (c) {
@@ -32,6 +38,9 @@ int main(int argc, const char *argv[]) {
 		case 'i':
 			invalid_op_quiet = true;
 			break;
+		case 'd':
+			dump_only = true;
+			break;
 		default:
 			return help(false);
 		}
@@ -41,6 +50,10 @@ int main(int argc, const char *argv[]) {
 	}
 
 	SerializedTrace::TraceContainerReader trace(argv[opt.ind]);
+	if (dump_only) {
+		DumpTrace(trace, offset, count);
+		return 0;
+	}
 	auto adapter = SelectTraceAdapter(trace.get_arch());
 	if (!adapter) {
 		throw RizinException("Failed to match frame_architecture %d to TraceAdapter.\n", (int)trace.get_arch());

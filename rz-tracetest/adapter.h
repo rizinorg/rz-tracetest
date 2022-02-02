@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2022 Florian Märkl <info@florianmaerkl.de>
+// SPDX-License-Identifier: LGPL-3.0-only
 
 #ifndef _TRACEADAPTER_H
 #define _TRACEADAPTER_H

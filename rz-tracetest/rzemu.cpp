@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: 2022 Florian Märkl <info@florianmaerkl.de>
+// SPDX-License-Identifier: LGPL-3.0-only
 
 #include "rzemu.h"
+#include "dump.h"
 
 RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg) :
 		adapter(std::move(adapter_arg)),
@@ -224,21 +227,12 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 		printf("%s\n\n", rz_strbuf_get(&sb));
 
 		auto print_operands = [this](const operand_value_list &operands) {
-			for (const auto &o : operands.elem()) {
-				if (o.operand_info_specific().has_reg_operand()) {
-					const auto &ro = o.operand_info_specific().reg_operand();
-					size_t real_bits = RZ_MIN(o.value().size() * 8, o.bit_length());
-					RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, real_bits);
-					char *ts = rz_bv_as_hex_string(tbv, true);
-					printf("  %s : %u = %s\n", ro.name().c_str(), (unsigned int)o.bit_length(), ts);
-					rz_mem_free(ts);
-					adapter->PrintRegisterDetails(ro.name(), o.value(), real_bits);
-				} else if (o.operand_info_specific().has_mem_operand()) {
-					const auto &mo = o.operand_info_specific().mem_operand();
-					char *hex = rz_hex_bin2strdup((const ut8 *)o.value().data(), o.value().size());
-					printf("  [0x%04" PFMT64x "] = %s\n", (ut64)mo.address(), hex);
-				}
-			}
+			DumpOperandList("  ", operands, [this](const operand_info &o, size_t real_bits) {
+				if (!o.operand_info_specific().has_reg_operand())
+					return;
+				const auto &ro = o.operand_info_specific().reg_operand();
+				adapter->PrintRegisterDetails(ro.name(), o.value(), real_bits);
+			});
 		};
 		printf(Color_GREEN "PRE-OPERANDS:" Color_RESET "\n");
 		print_operands(sf.operand_pre_list());
