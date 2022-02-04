@@ -115,6 +115,13 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 		rz_asm_op_fini(&asmop);
 	};
 
+	RzRegItem *pc_ri = rz_reg_get_by_role(reg.get(), RZ_REG_NAME_PC);
+	if (!pc_ri) {
+		print_disasm();
+		printf("RzReg has no program counter\n");
+		return FrameCheckResult::Unimplemented;
+	}
+
 	//////////////////////////////////////////
 	// Set up pre-state
 
@@ -123,8 +130,6 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 	rz_reg_arena_zero(reg.get(), RZ_REG_TYPE_ANY);
 
 	rz_io_write_at(io, sf.address(), (const ut8 *)code.data(), code.size());
-	rz_reg_set_value_by_role(reg.get(), RZ_REG_NAME_PC, sf.address());
-
 	for (const auto &o : sf.operand_pre_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
@@ -144,6 +149,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 			return FrameCheckResult::Unimplemented;
 		}
 	}
+	rz_reg_set_value_by_role(reg.get(), RZ_REG_NAME_PC, sf.address());
 
 	//////////////////////////////////////////
 	// Check manually disassembled op
@@ -167,6 +173,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 	}
 	RzILValidateReport validate_report = nullptr;
 	if (!rz_il_validate_effect(aop->il_op, validate_ctx.get(), NULL, NULL, &validate_report)) {
+		print_disasm();
 		RzStrBuf sb;
 		rz_strbuf_init(&sb);
 		rz_il_op_effect_stringify(aop->il_op, &sb);
@@ -182,6 +189,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 
 	RzAnalysisILStepResult sr = rz_analysis_il_vm_step(core->analysis, vm.get(), reg.get());
 	if (sr != RZ_ANALYSIS_IL_STEP_RESULT_SUCCESS) {
+		print_disasm();
 		printf("Step failed: ");
 		switch (sr) {
 		case RZ_ANALYSIS_IL_STEP_IL_RUNTIME_ERROR:
@@ -245,12 +253,6 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 
 	// fallback if next program counter not specified explicitly in post operands: fallthrough to next instruction
 	ut64 pc_expect = sf.address() + sf.rawbytes().length();
-	RzRegItem *pc_ri = rz_reg_get_by_role(reg.get(), RZ_REG_NAME_PC);
-	if (!pc_ri) {
-		mismatched();
-		printf("RzReg has no program counter\n");
-		return FrameCheckResult::Unimplemented;
-	}
 	std::string pc_tracename = pc_ri->name;
 
 	for (const auto &o : sf.operand_post_list().elem()) {

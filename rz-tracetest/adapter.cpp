@@ -68,6 +68,12 @@ class ARMTraceAdapter : public TraceAdapter
 	public:
 		std::string RizinArch() const override { return "arm"; }
 		int RizinBits() const override { return 32; } // TODO: thumb (16)
+
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			std::string r = tracereg;
+			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+			return r;
+		}
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
