@@ -84,7 +84,7 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 	return false;
 }
 
-FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_quiet) {
+FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, bool invalid_op_quiet) {
 	if (!f->has_std_frame()) {
 		printf("Non-std frame, can't deal with this (yet)\n");
 		return FrameCheckResult::Unimplemented;
@@ -252,7 +252,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 	// trace -> vm: check that every post-operand is correctly represented in the vm
 
 	// fallback if next program counter not specified explicitly in post operands: fallthrough to next instruction
-	ut64 pc_expect = sf.address() + sf.rawbytes().length();
+	ut64 pc_expect = next_pc.value_or(sf.address() + sf.rawbytes().length());
 	std::string pc_tracename = pc_ri->name;
 
 	for (const auto &o : sf.operand_post_list().elem()) {

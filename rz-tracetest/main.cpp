@@ -66,10 +66,17 @@ int main(int argc, const char *argv[]) {
 	RizinEmulator r(std::move(adapter));
 	trace.seek(offset);
 	ut64 stats[FRAME_CHECK_RESULT_COUNT] = {};
-	while (!trace.end_of_trace() && !rz_cons_is_breaked() && count) {
-		auto res = r.RunFrame(offset++, trace.get_frame().get(), invalid_op_quiet);
+	std::unique_ptr<frame> cur_frame = trace.get_frame();
+	while (cur_frame && !rz_cons_is_breaked() && count) {
+		std::unique_ptr<frame> next_frame = trace.end_of_trace() ? nullptr : trace.get_frame();
+		std::optional<ut64> next_pc = std::nullopt;
+		if (next_frame && next_frame->has_std_frame()) {
+			next_pc = next_frame->std_frame().address();
+		}
+		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, invalid_op_quiet);
 		stats[static_cast<int>(res)]++;
 		count--;
+		cur_frame = std::move(next_frame);
 	}
 
 	printf("\n---------------------------------\n");

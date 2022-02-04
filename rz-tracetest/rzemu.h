@@ -12,6 +12,7 @@
 
 #include <exception>
 #include <memory>
+#include <optional>
 
 class RizinException: public std::exception {
 	public:
@@ -59,7 +60,7 @@ class RizinEmulator {
 
 	public:
 		RizinEmulator(std::unique_ptr<TraceAdapter> adapter);
-		FrameCheckResult RunFrame(ut64 index, frame *f, bool invalid_op_quiet);
+		FrameCheckResult RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, bool invalid_op_quiet);
 };
 
 #endif
