@@ -12,7 +12,7 @@ static int help(bool verbose) {
 		printf(" -h            show help message\n");
 		printf(" -i            do not print unlifted instructions verbosely\n");
 		printf(" -o [offset]   index of the first frame to check, default: 0\n");
-		printf(" -v            be more verbose\n");
+		printf(" -v            be more verbose (can be repeated)\n");
 	}
 	return 1;
 }
@@ -73,7 +73,7 @@ int main(int argc, const char *argv[]) {
 		if (next_frame && next_frame->has_std_frame()) {
 			next_pc = next_frame->std_frame().address();
 		}
-		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, invalid_op_quiet);
+		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, verbose, invalid_op_quiet);
 		stats[static_cast<int>(res)]++;
 		count--;
 		cur_frame = std::move(next_frame);

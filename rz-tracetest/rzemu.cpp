@@ -84,7 +84,7 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 	return false;
 }
 
-FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, bool invalid_op_quiet) {
+FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet) {
 	if (!f->has_std_frame()) {
 		printf("Non-std frame, can't deal with this (yet)\n");
 		return FrameCheckResult::Unimplemented;
@@ -114,6 +114,9 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		printf(Color_RESET "\n");
 		rz_asm_op_fini(&asmop);
 	};
+	if (verbose > 0) {
+		print_disasm();
+	}
 
 	RzRegItem *pc_ri = rz_reg_get_by_role(reg.get(), RZ_REG_NAME_PC);
 	if (!pc_ri) {
@@ -214,13 +217,12 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	//////////////////////////////////////////
 	// Compare results
 
-	bool mismatch = false;
-	auto mismatched = [&]() {
-		if (mismatch) {
+	bool exec_info_printed = false;
+	auto print_exec_info = [&]() {
+		if (exec_info_printed) {
 			return;
 		}
-		print_disasm();
-		mismatch = true;
+		exec_info_printed = true;
 		RzStrBuf sb;
 		rz_strbuf_init(&sb);
 		rz_il_op_effect_stringify(aop->il_op, &sb);
@@ -252,6 +254,19 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 
 		rz_strbuf_fini(&sb);
 	};
+	if (verbose > 1) {
+		print_exec_info();
+	}
+
+	bool mismatch = false;
+	auto mismatched = [&]() {
+		if (mismatch) {
+			return;
+		}
+		mismatch = true;
+		print_disasm();
+		print_exec_info();
+	};
 
 	// trace -> vm: check that every post-operand is correctly represented in the vm
 
@@ -273,7 +288,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			}
 			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
 			RzBitVector *rbv = rz_reg_get_bv(reg.get(), ri);
-			adapter->AdjustRegContents(ro.name(), tbv, rbv); 
+			adapter->AdjustRegContents(ro.name(), tbv, rbv);
 			if (ri == pc_ri) {
 				pc_tracename = ro.name();
 				pc_expect = rz_bv_to_ut64(tbv);
