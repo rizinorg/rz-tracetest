@@ -133,7 +133,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	for (const auto &o : sf.operand_pre_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
-			RzRegItem *ri = rz_reg_get(reg.get(), adapter->TraceRegToRizin(ro.name()).c_str(), RZ_REG_TYPE_ANY);
+			auto rn = adapter->TraceRegToRizin(ro.name());
+			if (rn.empty()) {
+				continue;
+			}
+			RzRegItem *ri = rz_reg_get(reg.get(), rn.c_str(), RZ_REG_TYPE_ANY);
 			if (!ri) {
 				printf("Unknown reg: %s\n", ro.name().c_str());
 				continue;
@@ -258,7 +262,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	for (const auto &o : sf.operand_post_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
-			RzRegItem *ri = rz_reg_get(reg.get(), adapter->TraceRegToRizin(ro.name()).c_str(), RZ_REG_TYPE_ANY);
+			auto rn = adapter->TraceRegToRizin(ro.name());
+			if (rn.empty()) {
+				continue;
+			}
+			RzRegItem *ri = rz_reg_get(reg.get(), rn.c_str(), RZ_REG_TYPE_ANY);
 			if (!ri) {
 				printf("Unknown reg: %s\n", ro.name().c_str());
 				continue;
@@ -400,6 +408,9 @@ static bool RegIsBound(RzILRegBinding *rb, const char *var) {
  */
 bool RizinEmulator::TraceRegCoversILVar(const char *tracereg, const char *var) {
 	std::string rzreg = adapter->TraceRegToRizin(tracereg);
+	if (rzreg.empty()) {
+		return false;
+	}
 	RzRegItem *ri = rz_reg_get(reg.get(), rzreg.c_str(), RZ_REG_TYPE_ANY);
 	if (!ri) {
 		return false;

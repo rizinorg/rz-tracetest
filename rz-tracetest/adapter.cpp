@@ -70,9 +70,22 @@ class ARMTraceAdapter : public TraceAdapter
 		int RizinBits() const override { return 32; } // TODO: thumb (16)
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			if (tracereg == "GE") {
+				return std::string(); // not (yet) supported
+			}
 			std::string r = tracereg;
 			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
 			return r;
+		}
+
+		void AdjustRegContents(const std::string &tracename, RzBitVector *trace_val, RzBitVector *rizin_val) const override {
+			if (tracename == "NF" || tracename == "ZF" || tracename == "CF" || tracename == "VF" || tracename == "QF") {
+				// flags in the trace have 32 bits, but they should just have 1
+				bool set = !rz_bv_is_zero_vector(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 1);
+				rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
+			}
 		}
 };
 

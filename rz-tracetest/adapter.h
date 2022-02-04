@@ -34,7 +34,8 @@ class TraceAdapter
 		virtual int RizinBits() const;
 
 		/**
-		 * Get the name of the register in RzReg for a reg name given by the trace
+		 * Get the name of the register in RzReg for a reg name given by the trace.
+		 * May return an empty string to indicate that the trace register does not exist in rizin and should be ignored.
 		 */
 		virtual std::string TraceRegToRizin(const std::string &tracereg) const;
 
