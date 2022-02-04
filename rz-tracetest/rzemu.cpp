@@ -3,6 +3,7 @@
 
 #include "rzemu.h"
 #include "dump.h"
+#include "trace.h"
 
 RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg) :
 		adapter(std::move(adapter_arg)),
@@ -44,19 +45,6 @@ RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg) :
 	}
 }
 
-static ut32 RegOperandSizeBits(const operand_info &o) {
-	assert(o.operand_info_specific().has_reg_operand());
-	return RZ_MIN(o.value().size() * 8, o.bit_length());
-}
-
-static ut64 MemOperandSizeBytes(const operand_info &o) {
-	assert(o.operand_info_specific().has_mem_operand());
-	if (o.bit_length() % 8 != 0) {
-		printf("Bit length of mem operand not byte-aligned\n");
-	}
-	return RZ_MIN(o.value().size(), o.bit_length() / 8);
-}
-
 static void PrintEvent(ut64 index, const RzILEvent *ev) {
 	RzStrBuf sb;
 	rz_strbuf_init(&sb);
@@ -75,7 +63,7 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 				continue;
 			}
 			ut64 oaddr = o.operand_info_specific().mem_operand().address();
-			ut64 osize = o.bit_length() / 8;
+			ut64 osize = MemOperandSizeBytes(o);
 			if (addr >= oaddr && addr + size <= oaddr + osize) {
 				// fully contained
 				return true;
@@ -273,7 +261,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, bool invalid_op_q
 				printf("Unknown reg: %s\n", ro.name().c_str());
 				continue;
 			}
-			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RZ_MIN(o.value().size() * 8, o.bit_length()));
+			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
 			RzBitVector *rbv = rz_reg_get_bv(reg.get(), ri);
 			adapter->AdjustRegContents(ro.name(), tbv, rbv); 
 			if (ri == pc_ri) {

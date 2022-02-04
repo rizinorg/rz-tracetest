@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 #include "dump.h"
+#include "trace.h"
 
 #include <rz_asm.h>
 
@@ -57,14 +58,13 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm) {
 
 void DumpOperandList(const char *prefix, const operand_value_list &operands, std::function<void(const operand_info &, size_t)> print_detail) {
 	for (const auto &o : operands.elem()) {
-		size_t real_bits = o.bit_length();
+		size_t real_bits = OperandSizeBits(o);
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
-			real_bits = RZ_MIN(o.value().size() * 8, real_bits);
 			RzBitVector *tbv = real_bits ? rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, real_bits) : NULL;
 			char *ts = tbv ? rz_bv_as_hex_string(tbv, true) : NULL;
 			rz_bv_free(tbv);
-			printf("%s%s : %u = %s\n", prefix, ro.name().c_str(), (unsigned int)o.bit_length(), ts ? ts : "");
+			printf("%s%s : %u = %s\n", prefix, ro.name().c_str(), (unsigned int)real_bits, ts ? ts : "");
 			rz_mem_free(ts);
 		} else if (o.operand_info_specific().has_mem_operand()) {
 			const auto &mo = o.operand_info_specific().mem_operand();
