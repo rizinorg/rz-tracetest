@@ -351,15 +351,22 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		bool justified = false;
 		switch (ev->type) {
 		case RZ_IL_EVENT_VAR_READ: {
-			for (const auto &o : sf.operand_pre_list().elem()) {
-				if (!o.operand_info_specific().has_reg_operand()) {
-					continue;
+			auto check_oplist = [&](const ::google::protobuf::RepeatedPtrField< ::operand_info> & l) {
+				for (const auto &o : l) {
+					if (!o.operand_info_specific().has_reg_operand()) {
+						continue;
+					}
+					if (TraceRegCoversILVar(o.operand_info_specific().reg_operand().name().c_str(), ev->data.var_read.variable)) {
+						justified = true;
+						break;
+					}
 				}
-				if (TraceRegCoversILVar(o.operand_info_specific().reg_operand().name().c_str(), ev->data.var_read.variable)) {
-					justified = true;
-					break;
-				}
+			};
+			check_oplist(sf.operand_pre_list().elem());
+			if (justified) {
+				break;
 			}
+			check_oplist(sf.operand_post_list().elem());
 			break;
 		}
 		case RZ_IL_EVENT_VAR_WRITE:
