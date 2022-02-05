@@ -146,6 +146,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 				continue;
 			}
 			RzBitVector *bv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
+			adapter->AdjustRegContentsFromTrace(ro.name(), bv);
+			if (rz_bv_len(bv) != ri->size) {
+				printf("Can't apply reg value of %s (%s) because its size (%u) is not equal to the one in RzReg (%u)\n",
+					ro.name().c_str(), rn.c_str(), (unsigned int)rz_bv_len(bv), (unsigned int)ri->size);
+			}
 			rz_reg_set_bv(reg.get(), ri, bv);
 			rz_bv_free(bv);
 		} else if (o.operand_info_specific().has_mem_operand()) {
@@ -288,7 +293,8 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			}
 			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
 			RzBitVector *rbv = rz_reg_get_bv(reg.get(), ri);
-			adapter->AdjustRegContents(ro.name(), tbv, rbv);
+			adapter->AdjustRegContentsFromTrace(ro.name(), tbv);
+			adapter->AdjustRegContentsFromRizin(ro.name(), rbv);
 			if (ri == pc_ri) {
 				pc_tracename = ro.name();
 				pc_expect = rz_bv_to_ut64(tbv);

@@ -40,10 +40,16 @@ class TraceAdapter
 		virtual std::string TraceRegToRizin(const std::string &tracereg) const;
 
 		/**
-		 * Edit the contents of a register from the trace or RzReg before comparison
-		 * This is useful e.g. for masking out information that is unsupported by the other side.
+		 * Edit the contents of a register from the trace before comparison or before applying to RzReg
+		 * This is useful e.g. for masking out information that is unsupported by rizin.
 		 */
-		virtual void AdjustRegContents(const std::string &tracename, RzBitVector *trace_val, RzBitVector *rizin_val) const;
+		virtual void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const;
+
+		/**
+		 * Edit the contents of a register from RzReg before comparison
+		 * This is useful e.g. for masking out information that is unsupported by the trace.
+		 */
+		virtual void AdjustRegContentsFromRizin(const std::string &tracename, RzBitVector *rizin_val) const;
 
 		/**
 		 * Print additional arch-specific info about the register contents to stdout

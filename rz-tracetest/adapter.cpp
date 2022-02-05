@@ -17,7 +17,10 @@ std::string TraceAdapter::TraceRegToRizin(const std::string &tracereg) const {
 	return tracereg;
 }
 
-void TraceAdapter::AdjustRegContents(const std::string &tracename, RzBitVector *trace_val, RzBitVector *rizin_val) const {
+void TraceAdapter::AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const {
+}
+
+void TraceAdapter::AdjustRegContentsFromRizin(const std::string &tracename, RzBitVector *rizin_val) const {
 }
 
 void TraceAdapter::PrintRegisterDetails(const std::string &tracename, const std::string &data, size_t bits_size) const {
@@ -35,11 +38,17 @@ class VICETraceAdapter : public TraceAdapter
 			return tracereg;
 		}
 
-		void AdjustRegContents(const std::string &tracename, RzBitVector *trace_val, RzBitVector *rizin_val) const override {
+		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const override {
 			if (tracename == "sr") {
 				// mask out the unused and break bits, which rizin does not represent
 				rz_bv_set(trace_val, 5, false);
 				rz_bv_set(trace_val, 4, false);
+			}
+		}
+
+		void AdjustRegContentsFromRizin(const std::string &tracename, RzBitVector *rizin_val) const override {
+			if (tracename == "sr") {
+				// mask out the unused and break bits, which rizin does not represent
 				rz_bv_set(rizin_val, 5, false);
 				rz_bv_set(rizin_val, 4, false);
 			}
@@ -78,7 +87,7 @@ class ARMTraceAdapter : public TraceAdapter
 			return r;
 		}
 
-		void AdjustRegContents(const std::string &tracename, RzBitVector *trace_val, RzBitVector *rizin_val) const override {
+		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const override {
 			if (tracename == "NF" || tracename == "ZF" || tracename == "CF" || tracename == "VF" || tracename == "QF") {
 				// flags in the trace have 32 bits, but they should just have 1
 				bool set = !rz_bv_is_zero_vector(trace_val);
