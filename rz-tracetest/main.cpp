@@ -67,6 +67,7 @@ int main(int argc, const char *argv[]) {
 	trace.seek(offset);
 	ut64 stats[FRAME_CHECK_RESULT_COUNT] = {};
 	std::unique_ptr<frame> cur_frame = trace.get_frame();
+	ut64 total = 0;
 	while (cur_frame && !rz_cons_is_breaked() && count) {
 		std::unique_ptr<frame> next_frame = trace.end_of_trace() ? nullptr : trace.get_frame();
 		std::optional<ut64> next_pc = std::nullopt;
@@ -76,10 +77,11 @@ int main(int argc, const char *argv[]) {
 		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, verbose, invalid_op_quiet);
 		stats[static_cast<int>(res)]++;
 		count--;
+		total++;
 		cur_frame = std::move(next_frame);
 	}
 
-	printf("\n---------------------------------\n");
+	printf("\n-----------------------------------\n");
 	for (int i = 0; i < FRAME_CHECK_RESULT_COUNT; i++) {
 		switch (static_cast<FrameCheckResult>(i)) {
 		case FrameCheckResult::Success:
@@ -101,7 +103,8 @@ int main(int argc, const char *argv[]) {
 			printf("      unimplemented: ");
 			break;
 		}
-		printf("%" PFMT64u "\n", stats[i]);
+		float percent = 100.0f * (float)stats[i] / (float)total;
+		printf("%-7" PFMT64u " %5.1f%%\n", stats[i], percent);
 	}
 
 	return 0;
