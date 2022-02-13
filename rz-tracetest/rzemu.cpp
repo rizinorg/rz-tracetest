@@ -208,7 +208,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			printf("runtime error\n");
 			return FrameCheckResult::VMRuntimeError;
 		case RZ_ANALYSIS_IL_STEP_INVALID_OP:
-			printf("invalid op\n");
+			printf("unlifted or invalid op\n");
 			return FrameCheckResult::InvalidOp;
 		case RZ_ANALYSIS_IL_STEP_RESULT_NOT_SET_UP:
 			printf("not set up\n");

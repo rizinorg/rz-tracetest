@@ -81,26 +81,26 @@ int main(int argc, const char *argv[]) {
 		cur_frame = std::move(next_frame);
 	}
 
-	printf("\n-----------------------------------\n");
+	printf("\n--------------------------------------\n");
 	for (int i = 0; i < FRAME_CHECK_RESULT_COUNT; i++) {
 		switch (static_cast<FrameCheckResult>(i)) {
 		case FrameCheckResult::Success:
-			printf("            success: ");
+			printf("              success: ");
 			break;
 		case FrameCheckResult::InvalidOp:
-			printf("         invalid op: ");
+			printf("             unlifted: ");
 			break;
 		case FrameCheckResult::InvalidIL:
-			printf("         invalid il: ");
+			printf("           invalid il: ");
 			break;
 		case FrameCheckResult::VMRuntimeError:
-			printf("   vm runtime error: ");
+			printf("     vm runtime error: ");
 			break;
 		case FrameCheckResult::PostStateMismatch:
-			printf("post state mismatch: ");
+			printf("          misexecuted: ");
 			break;
 		case FrameCheckResult::Unimplemented:
-			printf("      unimplemented: ");
+			printf("missing trace feature: ");
 			break;
 		}
 		float percent = 100.0f * (float)stats[i] / (float)total;
