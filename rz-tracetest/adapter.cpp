@@ -17,13 +17,14 @@ std::string TraceAdapter::TraceRegToRizin(const std::string &tracereg) const {
 	return tracereg;
 }
 
-void TraceAdapter::AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const {
-}
+void TraceAdapter::AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const {}
 
-void TraceAdapter::AdjustRegContentsFromRizin(const std::string &tracename, RzBitVector *rizin_val) const {
-}
+void TraceAdapter::AdjustRegContentsFromRizin(const std::string &tracename, RzBitVector *rizin_val) const {}
 
-void TraceAdapter::PrintRegisterDetails(const std::string &tracename, const std::string &data, size_t bits_size) const {
+void TraceAdapter::PrintRegisterDetails(const std::string &tracename, const std::string &data, size_t bits_size) const {}
+
+bool TraceAdapter::IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const {
+	return false;
 }
 
 class VICETraceAdapter : public TraceAdapter
@@ -94,6 +95,21 @@ class ARMTraceAdapter : public TraceAdapter
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 1);
 				rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
+			}
+		}
+
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			switch (pc_actual) {
+			// Kernel-provided User Helpers
+			// See https://www.kernel.org/doc/Documentation/arm/kernel_user_helpers.txt
+			case 0xffff0ffc: // kuser_helper_version
+			case 0xffff0fe0: // kuser_get_tls
+			case 0xffff0fc0: // kuser_cmpxchg
+			case 0xffff0fa0: // kuser_memory_barrier
+			case 0xffff0f60: // kuser_cmpxchg64
+				return true;
+			default:
+				return false;
 			}
 		}
 };

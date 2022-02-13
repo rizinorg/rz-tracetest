@@ -334,7 +334,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 
 	// check program counter
 	ut64 pc_actual = rz_reg_get_value(reg.get(), pc_ri);
-	if (pc_actual != pc_expect) {
+	if (pc_actual != pc_expect && !adapter->IgnorePCMismatch(pc_actual, pc_expect)) {
 		mismatched();
 		printf(Color_RED "MISMATCH" Color_RESET " post program counter:\n");
 		printf("  expected %8s = 0x%" PFMT64x "\n", pc_tracename.c_str(), pc_expect);

@@ -56,6 +56,11 @@ class TraceAdapter
 		 * This can be used for example to expand the individual flag bits of a status register.
 		 */
 		virtual void PrintRegisterDetails(const std::string &tracename, const std::string &data, size_t bits_size) const;
+
+		/**
+		 * Return true here for specific next program counters to accept mismatches as correct.
+		 */
+		virtual bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const;
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch);
