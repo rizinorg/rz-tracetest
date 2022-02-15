@@ -6,7 +6,7 @@
 
 #include <rz_asm.h>
 
-static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm);
+static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, TraceAdapter *adapter);
 
 void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 count, int verbose, TraceAdapter *adapter) {
 	std::unique_ptr<RzAsm, decltype(&rz_asm_free)> rzasm(nullptr, rz_asm_free);
@@ -14,7 +14,7 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 		rzasm.reset(rz_asm_new());
 		rz_asm_use(rzasm.get(), adapter->RizinArch().c_str());
 		rz_asm_set_cpu(rzasm.get(), adapter->RizinCPU().c_str());
-		int bits = adapter->RizinBits();
+		int bits = adapter->RizinBits(std::nullopt);
 		if (bits) {
 			rz_asm_set_bits(rzasm.get(), bits);
 		}
@@ -32,7 +32,7 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 	while (!trace.end_of_trace() && count--) {
 		auto frame = trace.get_frame();
 		if (frame->has_std_frame()) {
-			DumpStdFrame(frame->std_frame(), index, rzasm.get());
+			DumpStdFrame(frame->std_frame(), index, rzasm.get(), adapter);
 		}
 		if (!frame->has_std_frame() || verbose) {
 			printf("%" PFMT64u " = %s\n", index, frame->DebugString().c_str());
@@ -41,7 +41,7 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 	}
 }
 
-static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm) {
+static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, TraceAdapter *adapter) {
 #if 0
 	if (frame.address() & (1 << 31)) {
 		return;
@@ -50,11 +50,18 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm) {
 	char *hex = rz_hex_bin2strdup((const ut8 *)frame.rawbytes().data(), frame.rawbytes().size());
 	printf(Color_BCYAN "-- %5" PFMT64u "    0x%" PFMT64x "    %s", index, (ut64)frame.address(), hex);
 	if (rzasm) {
+		int bits = adapter->RizinBits(frame.has_mode() ? std::make_optional(frame.mode()) : std::nullopt);
+		if (bits) {
+			rz_asm_set_bits(rzasm, bits);
+		}
 		char *disasm = rz_asm_to_string(rzasm, frame.address(), (const ut8 *)frame.rawbytes().data(), frame.rawbytes().size());
 		printf("    %s", disasm ? rz_str_trim_tail(disasm) : "(null)");
 		rz_mem_free(disasm);
 	}
 	printf(Color_RESET "\n");
+	if (frame.has_mode()) {
+		printf("  MODE: %s\n", frame.mode().c_str());
+	}
 	DumpOperandList("  PRE  ", frame.operand_pre_list(), [](const operand_info &, size_t){});
 	DumpOperandList("  POST ", frame.operand_post_list(), [](const operand_info &, size_t){});
 	rz_mem_free(hex);

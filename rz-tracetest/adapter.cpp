@@ -9,7 +9,7 @@ std::string TraceAdapter::RizinCPU() const {
 	return std::string();
 }
 
-int TraceAdapter::RizinBits() const {
+int TraceAdapter::RizinBits(std::optional<std::string> mode) const {
 	return 0;
 }
 
@@ -77,7 +77,10 @@ class Arm32TraceAdapter : public TraceAdapter
 {
 	public:
 		std::string RizinArch() const override { return "arm"; }
-		int RizinBits() const override { return 32; }
+
+		int RizinBits(std::optional<std::string> mode) const override {
+			return (mode && mode.value() == FRAME_MODE_ARM_T32) ? 16 : 32;
+		}
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
 			if (tracereg == "GE") {
@@ -133,7 +136,7 @@ class Arm64TraceAdapter : public TraceAdapter
 {
 	public:
 		std::string RizinArch() const override { return "arm"; }
-		int RizinBits() const override { return 64; }
+		int RizinBits(std::optional<std::string> mode) const override { return 64; }
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
 			if (tracereg == "R31") {

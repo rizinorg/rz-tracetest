@@ -22,7 +22,7 @@ RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg) :
 	if (!cpu.empty()) {
 		rz_config_set(core->config, "asm.cpu", cpu.c_str());
 	}
-	int bits = adapter->RizinBits();
+	int bits = adapter->RizinBits(std::nullopt);
 	if (bits) {
 		rz_config_set_i(core->config, "asm.bits", bits);
 	}
@@ -96,6 +96,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	const std_frame &sf = f->std_frame();
 	const std::string &code = sf.rawbytes();
 
+	int need_bits = adapter->RizinBits(sf.has_mode() ? std::make_optional(sf.mode()) : std::nullopt);
+	if (need_bits && need_bits != core->rasm->bits) {
+		rz_config_set_i(core->config, "asm.bits", need_bits);
+	}
+
 	struct Disasm {
 		bool failed;
 		std::string disasm_str;
@@ -131,6 +136,9 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			printf("%-16s    %s", disasm->hex_str.c_str(), disasm->disasm_str.c_str());
 		} else {
 			printf("?");
+		}
+		if (sf.has_mode()) {
+			printf("    (mode: %s)", sf.mode().c_str());
 		}
 		printf(Color_RESET "\n");
 	};

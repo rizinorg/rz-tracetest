@@ -54,6 +54,7 @@ message std_frame {
     required bytes rawbytes = 3;
     required operand_value_list operand_pre_list = 4;
     optional operand_value_list operand_post_list = 5;
+    optional string mode = 6;
 }
 
 message syscall_frame {

@@ -10,6 +10,7 @@
 #include <rz_analysis.h>
 
 #include <string>
+#include <optional>
 
 /*
  * Interface for any arch/source/... specific adjustments
@@ -31,8 +32,9 @@ class TraceAdapter
 
 		/**
 		 * value for asm.bits
+		 * \p encoding optional per-frame (CPU) mode
 		 */
-		virtual int RizinBits() const;
+		virtual int RizinBits(std::optional<std::string> mode) const;
 
 		/**
 		 * Get the name of the register in RzReg for a reg name given by the trace.
