@@ -81,7 +81,7 @@ class ARMTraceAdapter : public TraceAdapter
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
 			if (tracereg == "GE") {
-				return std::string(); // not (yet) supported
+				return std::string("gef");
 			}
 			std::string r = tracereg;
 			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
@@ -95,6 +95,12 @@ class ARMTraceAdapter : public TraceAdapter
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 1);
 				rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
+			}
+			if (tracename == "GE") {
+				ut32 val = rz_bv_to_ut32(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 4);
+				rz_bv_set_from_ut64(trace_val, val);
 			}
 		}
 
