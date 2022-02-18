@@ -99,6 +99,10 @@ class ARMTraceAdapter : public TraceAdapter
 		}
 
 		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			if ((pc_actual & ~1) == (pc_expect & ~1)) {
+				// interworking
+				return true;
+			}
 			switch (pc_actual) {
 			// Kernel-provided User Helpers
 			// See https://www.kernel.org/doc/Documentation/arm/kernel_user_helpers.txt
