@@ -17,7 +17,7 @@ std::string TraceAdapter::TraceRegToRizin(const std::string &tracereg) const {
 	return tracereg;
 }
 
-void TraceAdapter::AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const {}
+void TraceAdapter::AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const {}
 
 void TraceAdapter::AdjustRegContentsFromRizin(const std::string &tracename, RzBitVector *rizin_val) const {}
 
@@ -39,7 +39,7 @@ class VICETraceAdapter : public TraceAdapter
 			return tracereg;
 		}
 
-		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const override {
+		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
 			if (tracename == "sr") {
 				// mask out the unused and break bits, which rizin does not represent
 				rz_bv_set(trace_val, 5, false);
@@ -88,7 +88,7 @@ class ARMTraceAdapter : public TraceAdapter
 			return r;
 		}
 
-		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const override {
+		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
 			if (tracename == "NF" || tracename == "ZF" || tracename == "CF" || tracename == "VF" || tracename == "QF") {
 				// flags in the trace have 32 bits, but they should just have 1
 				bool set = !rz_bv_is_zero_vector(trace_val);
@@ -101,6 +101,11 @@ class ARMTraceAdapter : public TraceAdapter
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 4);
 				rz_bv_set_from_ut64(trace_val, val);
+			}
+			if (op && rz_bv_len(trace_val) == 32 && op->mnemonic && !strncmp(op->mnemonic, "mrs ", 4)) {
+				// mrs ops read cpsr and write a single register, but we don't support all bits from cpsr
+				// so we need to mask some out in the result.
+				rz_bv_set_from_ut64(trace_val, rz_bv_to_ut32(trace_val) & 0xf80f0000); // nzcvg is 0xf8000000, ge is 0xf0000
 			}
 		}
 

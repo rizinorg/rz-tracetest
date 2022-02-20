@@ -320,7 +320,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			}
 			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
 			RzBitVector *rbv = rz_reg_get_bv(reg.get(), ri);
-			adapter->AdjustRegContentsFromTrace(ro.name(), tbv);
+			adapter->AdjustRegContentsFromTrace(ro.name(), tbv, aop.get());
 			adapter->AdjustRegContentsFromRizin(ro.name(), rbv);
 			if (ri == pc_ri) {
 				pc_tracename = ro.name();

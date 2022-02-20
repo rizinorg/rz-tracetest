@@ -7,6 +7,7 @@
 #include <trace.container.hpp>
 
 #include <rz_util.h>
+#include <rz_analysis.h>
 
 #include <string>
 
@@ -42,8 +43,9 @@ class TraceAdapter
 		/**
 		 * Edit the contents of a register from the trace before comparison or before applying to RzReg
 		 * This is useful e.g. for masking out information that is unsupported by rizin.
+		 * \p op given only when checking post-operands (otherwise null), to mask out anything op-dependent
 		 */
-		virtual void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val) const;
+		virtual void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op = nullptr) const;
 
 		/**
 		 * Edit the contents of a register from RzReg before comparison
