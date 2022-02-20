@@ -383,7 +383,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 					if (!o.operand_info_specific().has_reg_operand()) {
 						continue;
 					}
-					if (TraceRegCoversILVar(o.operand_info_specific().reg_operand().name().c_str(), ev->data.var_read.variable)) {
+					if (TraceRegOverlapsILVar(o.operand_info_specific().reg_operand().name().c_str(), ev->data.var_read.variable)) {
 						justified = true;
 						break;
 					}
@@ -411,7 +411,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 				if (!o.operand_info_specific().has_reg_operand()) {
 					continue;
 				}
-				if (TraceRegCoversILVar(o.operand_info_specific().reg_operand().name().c_str(), ev->data.var_write.variable)) {
+				if (TraceRegOverlapsILVar(o.operand_info_specific().reg_operand().name().c_str(), ev->data.var_write.variable)) {
 					// No need to check contents here. Since there is a post operand, this has already been checked in the above loop.
 					justified = true;
 					break;
@@ -461,7 +461,7 @@ static bool RegIsBound(RzILRegBinding *rb, const char *var) {
 /**
  * Check if the global IL variable \p var is contained inside the RzReg register corresponding to the given trace register name
  */
-bool RizinEmulator::TraceRegCoversILVar(const char *tracereg, const char *var) {
+bool RizinEmulator::TraceRegOverlapsILVar(const char *tracereg, const char *var) {
 	std::string rzreg = adapter->TraceRegToRizin(tracereg);
 	if (rzreg.empty()) {
 		return false;
@@ -480,5 +480,5 @@ bool RizinEmulator::TraceRegCoversILVar(const char *tracereg, const char *var) {
 	if (!vi || ri->type != vi->type) {
 		return false;
 	}
-	return vi->offset >= ri->offset && vi->offset + vi->size <= ri->offset + ri->size;
+	return !(vi->offset >= ri->offset + ri->size || vi->offset + vi->size <= ri->offset);
 }

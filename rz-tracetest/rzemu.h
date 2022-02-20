@@ -57,7 +57,7 @@ class RizinEmulator {
 		std::unique_ptr<RzAnalysisILVM, decltype(&rz_analysis_il_vm_free)> vm;
 		std::unique_ptr<RzILValidateGlobalContext, decltype(&rz_il_validate_global_context_free)> validate_ctx;
 
-		bool TraceRegCoversILVar(const char *tracereg, const char *var);
+		bool TraceRegOverlapsILVar(const char *tracereg, const char *var);
 
 	public:
 		RizinEmulator(std::unique_ptr<TraceAdapter> adapter);
