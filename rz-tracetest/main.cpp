@@ -4,6 +4,8 @@
 #include "rzemu.h"
 #include "dump.h"
 
+#include <regex>
+
 static int help(bool verbose) {
 	printf("Usage: rz-tracetest [-dhiv] [-c count] [-o offset] <filename>.frames\n");
 	if (verbose) {
@@ -12,6 +14,7 @@ static int help(bool verbose) {
 		printf(" -h            show help message\n");
 		printf(" -i            do not print unlifted instructions verbosely\n");
 		printf(" -o [offset]   index of the first frame to check, default: 0\n");
+		printf(" -s [regex]    skip every frame whose disassembly string matches the given regex\n");
 		printf(" -v            be more verbose (can be repeated)\n");
 	}
 	return 1;
@@ -23,9 +26,10 @@ int main(int argc, const char *argv[]) {
 	bool invalid_op_quiet = false;
 	bool dump_only = false;
 	int verbose = 0;
+	std::optional<std::regex> skip_re;
 
 	RzGetopt opt;
-	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idv");
+	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idvs:");
 	int c;
 	while ((c = rz_getopt_next(&opt)) != -1) {
 		switch (c) {
@@ -43,6 +47,13 @@ int main(int argc, const char *argv[]) {
 		case 'd':
 			dump_only = true;
 			break;
+		case 's':
+			if (skip_re) {
+				eprintf("-s can only be specified once. (use |)\n");
+				return 1;
+			}
+			skip_re = std::regex(opt.arg, std::regex_constants::egrep);
+			break;
 		case 'v':
 			verbose++;
 			break;
@@ -52,6 +63,14 @@ int main(int argc, const char *argv[]) {
 	}
 	if (opt.ind + 1 != argc) { // expect exactly 1 positional arg
 		return help(false);
+	}
+
+	std::optional<std::function<bool(const std::string &)>> skip_by_disasm;
+	if (skip_re) {
+		const std::regex &re = *skip_re;
+		skip_by_disasm = [&re](const std::string &disasm) {
+			return std::regex_match(disasm, re);
+		};
 	}
 
 	SerializedTrace::TraceContainerReader trace(argv[opt.ind]);
@@ -74,7 +93,7 @@ int main(int argc, const char *argv[]) {
 		if (next_frame && next_frame->has_std_frame()) {
 			next_pc = next_frame->std_frame().address();
 		}
-		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, verbose, invalid_op_quiet);
+		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, verbose, invalid_op_quiet, skip_by_disasm);
 		stats[static_cast<int>(res)]++;
 		count--;
 		total++;
@@ -86,6 +105,9 @@ int main(int argc, const char *argv[]) {
 		switch (static_cast<FrameCheckResult>(i)) {
 		case FrameCheckResult::Success:
 			printf("              success: ");
+			break;
+		case FrameCheckResult::Skipped:
+			printf("              skipped: ");
 			break;
 		case FrameCheckResult::InvalidOp:
 			printf("             unlifted: ");

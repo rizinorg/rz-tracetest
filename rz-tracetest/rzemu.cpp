@@ -84,7 +84,8 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 	return false;
 }
 
-FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet) {
+FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet,
+	std::optional<std::function<bool(const std::string &)>> skip_by_disasm) {
 	if (!f->has_std_frame()) {
 		printf("Non-std frame, can't deal with this (yet)\n");
 		return FrameCheckResult::Unimplemented;
@@ -95,27 +96,53 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	const std_frame &sf = f->std_frame();
 	const std::string &code = sf.rawbytes();
 
+	struct Disasm {
+		bool failed;
+		std::string disasm_str;
+		std::string hex_str;
+	};
+	std::optional<Disasm> disasm;
+	auto disassemble = [&]() {
+		if (disasm) {
+			return;
+		}
+		disasm = Disasm();
+		RzAsmOp asmop = {};
+		core->rasm->pc = sf.address();
+		disasm->failed = rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) <= 0;
+		if (!disasm->failed) {
+			disasm->disasm_str = rz_strbuf_get(&asmop.buf_asm);
+			char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
+			disasm->hex_str = hex;
+			rz_mem_free(hex);
+		}
+		rz_asm_op_fini(&asmop);
+	};
+
 	bool disasm_printed = false;
 	auto print_disasm = [&]() {
 		if (disasm_printed) {
 			return;
 		}
 		disasm_printed = true;
+		disassemble();
 		printf(Color_BCYAN "-- %5" PFMT64u "     0x%08" PFMT64x "    ", index, (ut64)sf.address());
-		RzAsmOp asmop = {};
-		core->rasm->pc = sf.address();
-		if (rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) > 0) {
-			char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
-			printf("%-16s    %s", hex, rz_strbuf_get(&asmop.buf_asm));
-			free(hex);
+		if (!disasm->failed) {
+			printf("%-16s    %s", disasm->hex_str.c_str(), disasm->disasm_str.c_str());
 		} else {
 			printf("?");
 		}
 		printf(Color_RESET "\n");
-		rz_asm_op_fini(&asmop);
 	};
 	if (verbose > 0) {
 		print_disasm();
+	}
+
+	if (skip_by_disasm) {
+		disassemble();
+		if (!disasm->failed && (*skip_by_disasm)(disasm->disasm_str)) {
+			return FrameCheckResult::Skipped;
+		}
 	}
 
 	RzRegItem *pc_ri = rz_reg_get_by_role(reg.get(), RZ_REG_NAME_PC);
