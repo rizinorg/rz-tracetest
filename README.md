@@ -18,12 +18,11 @@ rz-tracetest:
 
 * [VICE](https://github.com/rizinorg/vice) Patched VICE emulator for testing
   6502.
+* [QEMU](https://github.com/BinaryAnalysisPlatform/qemu) Patched for the BAP
+  project. Specifically useful for ARM and potentially later x86 too.
 
 Other sources which have not been tested with rz-tracetest specifically yet:
 
-* [QEMU](https://github.com/BinaryAnalysisPlatform/qemu) Patched for the BAP
-  project. A Dockerfile for conveniently using it is provided
-  [inside this repo](qemu-bap-docker/). Specifically useful for ARM and x86.
 * [bap-pintraces](https://github.com/BinaryAnalysisPlatform/bap-pintraces) using
   Intel Pin. Useful for x86, but alas Pin is proprietary.
 
