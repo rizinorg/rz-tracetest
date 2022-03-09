@@ -73,11 +73,11 @@ class VICETraceAdapter : public TraceAdapter
 		}
 };
 
-class ARMTraceAdapter : public TraceAdapter
+class Arm32TraceAdapter : public TraceAdapter
 {
 	public:
 		std::string RizinArch() const override { return "arm"; }
-		int RizinBits() const override { return 32; } // TODO: thumb (16)
+		int RizinBits() const override { return 32; }
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
 			if (tracereg == "GE") {
@@ -129,12 +129,21 @@ class ARMTraceAdapter : public TraceAdapter
 		}
 };
 
+class Arm64TraceAdapter : public TraceAdapter
+{
+	public:
+		std::string RizinArch() const override { return "arm"; }
+		int RizinBits() const override { return 64; }
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 		case frame_arch_6502:
 			return std::unique_ptr<TraceAdapter>(new VICETraceAdapter());
 		case frame_arch_arm:
-			return std::unique_ptr<TraceAdapter>(new ARMTraceAdapter());
+			return std::unique_ptr<TraceAdapter>(new Arm32TraceAdapter());
+		case frame_arch_aarch64:
+			return std::unique_ptr<TraceAdapter>(new Arm64TraceAdapter());
 		default:
 			return nullptr;
 	}
