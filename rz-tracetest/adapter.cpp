@@ -134,6 +134,16 @@ class Arm64TraceAdapter : public TraceAdapter
 	public:
 		std::string RizinArch() const override { return "arm"; }
 		int RizinBits() const override { return 64; }
+
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			if (tracereg == "R31") {
+				return "sp";
+			}
+			if (tracereg.size() >= 1 && tracereg[0] == 'R') {
+				return "x" + tracereg.substr(1);
+			}
+			return tracereg;
+		}
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
