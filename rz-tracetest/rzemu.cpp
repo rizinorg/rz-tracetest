@@ -169,12 +169,14 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			}
 			RzRegItem *ri = rz_reg_get(reg.get(), rn.c_str(), RZ_REG_TYPE_ANY);
 			if (!ri) {
+				print_disasm();
 				printf("Unknown reg: %s\n", ro.name().c_str());
 				continue;
 			}
 			RzBitVector *bv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
 			adapter->AdjustRegContentsFromTrace(ro.name(), bv);
 			if (rz_bv_len(bv) != ri->size) {
+				print_disasm();
 				printf("Can't apply reg value of %s (%s) because its size (%u) is not equal to the one in RzReg (%u)\n",
 					ro.name().c_str(), rn.c_str(), (unsigned int)rz_bv_len(bv), (unsigned int)ri->size);
 			}
@@ -184,6 +186,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			const auto &mo = o.operand_info_specific().mem_operand();
 			rz_io_write_at(io, mo.address(), (const ut8 *)o.value().data(), MemOperandSizeBytes(o));
 		} else {
+			print_disasm();
 			printf("No or unknown operand type\n");
 			return FrameCheckResult::Unimplemented;
 		}
