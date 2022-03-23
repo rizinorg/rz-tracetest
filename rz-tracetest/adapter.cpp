@@ -27,6 +27,10 @@ bool TraceAdapter::IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const {
 	return false;
 }
 
+bool TraceAdapter::AllowNoOperandSameValueAssignment() const {
+	return false;
+}
+
 class VICETraceAdapter : public TraceAdapter
 {
 	public:
@@ -70,6 +74,10 @@ class VICETraceAdapter : public TraceAdapter
 				printf("    6  %#04x  V  = %d\n", 1 << 6, (sr & (1 << 6)) != 0);
 				printf("    7  %#04x  N  = %d\n", 1 << 7, (sr & (1 << 7)) != 0);
 			}
+		}
+
+		bool AllowNoOperandSameValueAssignment() const override {
+			return true;
 		}
 };
 

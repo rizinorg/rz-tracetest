@@ -65,6 +65,12 @@ class TraceAdapter
 		 * Return true here for specific next program counters to accept mismatches as correct.
 		 */
 		virtual bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const;
+
+		/**
+		 * If this returns true, assignments to a variable with the same value as the variable had before
+		 * will be justified even if they are not recorded as post operands.
+		 */
+		virtual bool AllowNoOperandSameValueAssignment() const;
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch);

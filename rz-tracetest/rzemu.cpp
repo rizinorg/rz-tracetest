@@ -412,7 +412,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			// set to the actual final one later and the final one is equal to the original one will
 			// cause false-positives here.
 			// So extend this if it becomes a problem with other archs in the future:
-			if (rz_il_value_eq(ev->data.var_write.old_value, ev->data.var_write.new_value)) {
+			if (adapter->AllowNoOperandSameValueAssignment() && rz_il_value_eq(ev->data.var_write.old_value, ev->data.var_write.new_value)) {
 				// Especially relevant for 6502 from VICE, which does not record
 				// variables assigned to the same value as post operands.
 				justified = true;
