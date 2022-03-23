@@ -114,7 +114,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		disasm = Disasm();
 		RzAsmOp asmop = {};
 		core->rasm->pc = sf.address();
-		disasm->failed = rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) <= 0;
+		disasm->failed = !code.size() || rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) <= 0;
 		if (!disasm->failed) {
 			disasm->disasm_str = rz_strbuf_get(&asmop.buf_asm);
 			char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
@@ -144,6 +144,12 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	};
 	if (verbose > 0) {
 		print_disasm();
+	}
+
+	if (!code.size()) {
+		print_disasm();
+		printf("no code supplied.\n");
+		return FrameCheckResult::InvalidOp;
 	}
 
 	if (skip_by_disasm) {
