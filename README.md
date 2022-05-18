@@ -34,6 +34,11 @@ First, install rizin and make sure the bap-frames submodule is up to date:
 git submodule update --init
 ```
 
+Afterwards install the build dependencies:
+```
+sudo apt install libprotobuf-dev protobuf-compile
+```
+
 Then:
 ```
 cd rz-tracetest
