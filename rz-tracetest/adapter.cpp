@@ -169,6 +169,35 @@ class Arm64TraceAdapter : public TraceAdapter
 		}
 };
 
+class PPCTraceAdapter : public TraceAdapter
+{
+	public:
+		std::string RizinArch() const override { return "ppc"; }
+		int RizinBits(std::optional<std::string> mode) const override { return 64; }
+
+		// std::string TraceRegToRizin(const std::string &tracereg) const override {
+		// 	if (tracereg == "R31") {
+		// 		return "lr";
+		// 	}
+		// 	if (tracereg.size() >= 1 && tracereg[0] == 'R') {
+		// 		return "x" + tracereg.substr(1);
+		// 	}
+		// 	std::string r = tracereg;
+		// 	std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+		// 	return r;
+		// }
+
+		// void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
+		// 	if (tracename == "NF" || tracename == "ZF" || tracename == "CF" || tracename == "VF") {
+		// 		// flags in the trace have 32 bits, but they should just have 1
+		// 		bool set = !rz_bv_is_zero_vector(trace_val);
+		// 		rz_bv_fini(trace_val);
+		// 		rz_bv_init(trace_val, 1);
+		// 		rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
+		// 	}
+		// }
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 		case frame_arch_6502:
@@ -177,6 +206,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 			return std::unique_ptr<TraceAdapter>(new Arm32TraceAdapter());
 		case frame_arch_aarch64:
 			return std::unique_ptr<TraceAdapter>(new Arm64TraceAdapter());
+		case frame_arch_powerpc:
+			return std::unique_ptr<TraceAdapter>(new PPCTraceAdapter());
 		default:
 			return nullptr;
 	}
