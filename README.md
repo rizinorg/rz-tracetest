@@ -36,7 +36,7 @@ git submodule update --init
 
 Afterwards install the build dependencies:
 ```
-sudo apt install libprotobuf-dev protobuf-compile
+sudo apt install libprotobuf-dev protobuf-compiler
 ```
 
 Then:
