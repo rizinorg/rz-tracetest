@@ -15,7 +15,7 @@ int TraceAdapter::RizinBits(std::optional<std::string> mode) const {
 
 /**
  * \brief Converts the a register name from the trace to an equivalent register name in Rizin.
- *
+ * 
  * \param tracereg The trace register name.
  * \return std::string The equivalent register name in Rizin.
  */
@@ -200,29 +200,13 @@ class PPCTraceAdapter : public TraceAdapter
 {
 	public:
 		std::string RizinArch() const override { return "ppc"; }
-		int RizinBits(std::optional<std::string> mode) const override { return 64; }
+		int RizinBits(std::optional<std::string> mode) const override {
+			return (mode && mode.value() == FRAME_MODE_PPC64) ? 64 : 32;
+		}
 
-		// std::string TraceRegToRizin(const std::string &tracereg) const override {
-		// 	if (tracereg == "R31") {
-		// 		return "lr";
-		// 	}
-		// 	if (tracereg.size() >= 1 && tracereg[0] == 'R') {
-		// 		return "x" + tracereg.substr(1);
-		// 	}
-		// 	std::string r = tracereg;
-		// 	std::transform(r.begin(), r.end(), r.begin(), ::tolower);
-		// 	return r;
-		// }
-
-		// void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
-		// 	if (tracename == "NF" || tracename == "ZF" || tracename == "CF" || tracename == "VF") {
-		// 		// flags in the trace have 32 bits, but they should just have 1
-		// 		bool set = !rz_bv_is_zero_vector(trace_val);
-		// 		rz_bv_fini(trace_val);
-		// 		rz_bv_init(trace_val, 1);
-		// 		rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
-		// 	}
-		// }
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			return false;
+		}
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
