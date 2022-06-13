@@ -207,6 +207,17 @@ class PPCTraceAdapter : public TraceAdapter
 		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
 			return false;
 		}
+
+                std::string
+                TraceRegToRizin(const std::string &tracereg) const override {
+                  if (tracereg.substr(0, 3) == "crf") {
+                    // crf0 -> cr0
+                    return std::string()
+                        .append(tracereg.substr(0, 2))
+                        .append(tracereg.substr(3, 1));
+                  }
+                  return tracereg;
+                }
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
