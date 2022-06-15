@@ -200,6 +200,7 @@ class PPCTraceAdapter : public TraceAdapter
 {
 	public:
 		std::string RizinArch() const override { return "ppc"; }
+
 		int RizinBits(std::optional<std::string> mode) const override {
 			return (mode && mode.value() == FRAME_MODE_PPC64) ? 64 : 32;
 		}
@@ -208,16 +209,15 @@ class PPCTraceAdapter : public TraceAdapter
 			return false;
 		}
 
-                std::string
-                TraceRegToRizin(const std::string &tracereg) const override {
-                  if (tracereg.substr(0, 3) == "crf") {
-                    // crf0 -> cr0
-                    return std::string()
-                        .append(tracereg.substr(0, 2))
-                        .append(tracereg.substr(3, 1));
-                  }
-                  return tracereg;
-                }
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			if (tracereg.substr(0, 3) == "crf") {
+			// crf0 -> cr0
+			return std::string()
+				.append(tracereg.substr(0, 2))
+				.append(tracereg.substr(3, 1));
+			}
+			return tracereg;
+		}
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
