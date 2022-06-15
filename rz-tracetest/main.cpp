@@ -12,6 +12,9 @@ static int help(bool verbose) {
 		printf(" -c [count]    number of frames to check, default: all\n");
 		printf(" -d            dump trace as text, but do not run or test anything\n");
 		printf(" -e            fail early/stop at the first error\n");
+		printf(" -u            fail early/stop at the first unlifted execption\n");
+		printf(" -r            fail early/stop at the first runtime error\n");
+		printf(" -m            fail early/stop at the first execution mismatch\n");
 		printf(" -h            show help message\n");
 		printf(" -i            do not print unlifted instructions verbosely\n");
 		printf(" -o [offset]   index of the first frame to check, default: 0\n");
@@ -27,11 +30,14 @@ int main(int argc, const char *argv[]) {
 	bool invalid_op_quiet = false;
 	bool dump_only = false;
 	bool fail_early = false;
+	bool fail_unlifted = false;
+	bool fail_runtime = false;
+	bool fail_misexec = false;
 	int verbose = 0;
 	std::optional<std::regex> skip_re;
 
 	RzGetopt opt;
-	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idvs:e");
+	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idvs:eurm");
 	int c;
 	while ((c = rz_getopt_next(&opt)) != -1) {
 		switch (c) {
@@ -51,6 +57,15 @@ int main(int argc, const char *argv[]) {
 			break;
 		case 'e':
 			fail_early = true;
+			break;
+		case 'u':
+			fail_unlifted = true;
+			break;
+		case 'r':
+			fail_runtime = true;
+			break;
+		case 'm':
+			fail_misexec = true;
 			break;
 		case 's':
 			if (skip_re) {
@@ -104,6 +119,16 @@ int main(int argc, const char *argv[]) {
 		total++;
 		cur_frame = std::move(next_frame);
 		if (fail_early && res != FrameCheckResult::Success && res != FrameCheckResult::Skipped) {
+			break;
+		}
+		if (fail_unlifted && res == FrameCheckResult::InvalidOp) {
+			break;
+		}
+		if (fail_runtime && res == FrameCheckResult::VMRuntimeError) {
+			break;
+		}
+		if (fail_misexec &&
+			res == FrameCheckResult::PostStateMismatch) {
 			break;
 		}
 	}
