@@ -39,6 +39,7 @@ int main(int argc, const char *argv[]) {
 	RzGetopt opt;
 	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idvs:eurm");
 	int c;
+
 	while ((c = rz_getopt_next(&opt)) != -1) {
 		switch (c) {
 		case 'h':
