@@ -18,6 +18,7 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 		if (bits) {
 			rz_asm_set_bits(rzasm.get(), bits);
 		}
+		rz_asm_set_big_endian(rzasm.get(), adapter->get_is_big_endian());
 	}
 
 	printf("trace version: %" PFMT64u "\n", (ut64)trace.get_trace_version());
@@ -54,6 +55,7 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, Trace
 		if (bits) {
 			rz_asm_set_bits(rzasm, bits);
 		}
+		rz_asm_set_big_endian(rzasm, adapter->get_is_big_endian());
 		char *disasm = rz_asm_to_string(rzasm, frame.address(), (const ut8 *)frame.rawbytes().data(), frame.rawbytes().size());
 		printf("    %s", disasm ? rz_str_trim_tail(disasm) : "(null)");
 		rz_mem_free(disasm);
