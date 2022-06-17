@@ -220,6 +220,12 @@ class PPCTraceAdapter : public TraceAdapter
 			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
 			return r;
 		}
+		
+		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
+			if (tracename.substr(0, 3) == "crf") {
+				trace_val->len = 4;
+			}
+		}
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
