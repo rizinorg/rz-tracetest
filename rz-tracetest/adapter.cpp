@@ -216,7 +216,9 @@ class PPCTraceAdapter : public TraceAdapter
 				.append(tracereg.substr(0, 2))
 				.append(tracereg.substr(3, 1));
 			}
-			return tracereg;
+			std::string r = tracereg;
+			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+			return r;
 		}
 };
 
