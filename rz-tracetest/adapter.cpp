@@ -5,6 +5,14 @@
 
 #include <memory>
 
+static bool is_one_bit_flag(const std::string &tn) {
+	// PPC
+	if (tn == "ca" || tn == "ca32" || tn == "ov" || tn == "ov32" || tn == "so") {
+		return true;
+	}
+	return false;
+}
+
 std::string TraceAdapter::RizinCPU() const {
 	return std::string();
 }
@@ -223,7 +231,15 @@ class PPCTraceAdapter : public TraceAdapter
 		
 		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
 			if (tracename.substr(0, 3) == "crf") {
-				trace_val->len = 4;
+				ut8 v = rz_bv_to_ut8(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 4);
+				rz_bv_set_from_ut64(trace_val, v);
+			} else if (is_one_bit_flag(tracename)) {
+				bool set = !rz_bv_is_zero_vector(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 1);
+				rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
 			}
 		}
 };
