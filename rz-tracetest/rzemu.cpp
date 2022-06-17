@@ -284,7 +284,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 					return;
 				const auto &ro = o.operand_info_specific().reg_operand();
 				adapter->PrintRegisterDetails(ro.name(), o.value(), real_bits);
-			});
+			}, adapter->get_is_big_endian());
 		};
 		printf(Color_GREEN "PRE-OPERANDS:" Color_RESET "\n");
 		print_operands(sf.operand_pre_list());
@@ -361,9 +361,10 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			ut64 size = MemOperandSizeBytes(o);
 			std::vector<ut8> actual(size);
 			rz_io_read_at(io, mo.address(), actual.data(), size);
-			if (memcmp(actual.data(), o.value().data(), size)) {
+			std::vector<ut8> frame_mem = ReadFrameMem(o.value().data(), size, adapter->get_is_big_endian());
+			if (memcmp(actual.data(), frame_mem.data(), size)) {
 				mismatched();
-				char *ts = rz_hex_bin2strdup((const ut8 *)o.value().data(), size);
+				char *ts = rz_hex_bin2strdup((const ut8 *)frame_mem.data(), size);
 				char *rs = rz_hex_bin2strdup(actual.data(), size);
 				printf(Color_RED "MISMATCH" Color_RESET " post memory:\n");
 				printf("  expected [0x%04" PFMT64x "] = %s\n", (ut64)mo.address(), ts);
