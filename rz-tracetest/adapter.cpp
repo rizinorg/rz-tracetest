@@ -17,7 +17,7 @@ std::string TraceAdapter::RizinCPU() const {
 	return std::string();
 }
 
-int TraceAdapter::RizinBits(std::optional<std::string> mode) const {
+int TraceAdapter::RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const {
 	return 0;
 }
 
@@ -121,7 +121,7 @@ class Arm32TraceAdapter : public TraceAdapter
 	public:
 		std::string RizinArch() const override { return "arm"; }
 
-		int RizinBits(std::optional<std::string> mode) const override {
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const override {
 			return (mode && mode.value() == FRAME_MODE_ARM_T32) ? 16 : 32;
 		}
 
@@ -179,7 +179,7 @@ class Arm64TraceAdapter : public TraceAdapter
 {
 	public:
 		std::string RizinArch() const override { return "arm"; }
-		int RizinBits(std::optional<std::string> mode) const override { return 64; }
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const override { return 64; }
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
 			if (tracereg == "R31") {
@@ -209,8 +209,11 @@ class PPCTraceAdapter : public TraceAdapter
 	public:
 		std::string RizinArch() const override { return "ppc"; }
 
-		int RizinBits(std::optional<std::string> mode) const override {
-			return (mode && mode.value() == FRAME_MODE_PPC64) ? 64 : 32;
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const override {
+			if (mode) {
+				return (mode.value() == FRAME_MODE_PPC64) ? 64 : 32;
+			}
+			return mach.value();
 		}
 
 		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {

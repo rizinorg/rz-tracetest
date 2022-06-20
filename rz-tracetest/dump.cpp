@@ -32,7 +32,7 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 		rzasm.reset(rz_asm_new());
 		rz_asm_use(rzasm.get(), adapter->RizinArch().c_str());
 		rz_asm_set_cpu(rzasm.get(), adapter->RizinCPU().c_str());
-		int bits = adapter->RizinBits(std::nullopt);
+		int bits = adapter->RizinBits(std::nullopt, adapter->get_mach());
 		if (bits) {
 			rz_asm_set_bits(rzasm.get(), bits);
 		}
@@ -69,7 +69,7 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, Trace
 	char *hex = rz_hex_bin2strdup((const ut8 *)frame.rawbytes().data(), frame.rawbytes().size());
 	printf(Color_BCYAN "-- %5" PFMT64u "    0x%" PFMT64x "    %s", index, (ut64)frame.address(), hex);
 	if (rzasm) {
-		int bits = adapter->RizinBits(frame.has_mode() ? std::make_optional(frame.mode()) : std::nullopt);
+		int bits = adapter->RizinBits(frame.has_mode() ? std::make_optional(frame.mode()) : std::nullopt, adapter->get_mach());
 		if (bits) {
 			rz_asm_set_bits(rzasm, bits);
 		}

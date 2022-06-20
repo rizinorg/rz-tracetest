@@ -22,7 +22,7 @@ RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg) :
 	if (!cpu.empty()) {
 		rz_config_set(core->config, "asm.cpu", cpu.c_str());
 	}
-	int bits = adapter->RizinBits(std::nullopt);
+	int bits = adapter->RizinBits(std::nullopt, adapter->get_mach());
 	if (bits) {
 		rz_config_set_i(core->config, "asm.bits", bits);
 	}
@@ -97,7 +97,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	const std_frame &sf = f->std_frame();
 	const std::string &code = sf.rawbytes();
 
-	int need_bits = adapter->RizinBits(sf.has_mode() ? std::make_optional(sf.mode()) : std::nullopt);
+	int need_bits = adapter->RizinBits(sf.has_mode() ? std::make_optional(sf.mode()) : std::nullopt, adapter->get_mach());
 	if (need_bits && need_bits != core->rasm->bits) {
 		rz_config_set_i(core->config, "asm.bits", need_bits);
 	}

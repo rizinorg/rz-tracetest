@@ -104,6 +104,7 @@ int main(int argc, const char *argv[]) {
 	if (!adapter) {
 		throw RizinException("Failed to match frame_architecture %d to TraceAdapter.\n", (int)trace.get_arch());
 	}
+	adapter->set_mach(trace.get_machine());
 	adapter.get()->set_is_big_endian(big_endian);
 	if (dump_only) {
 		DumpTrace(trace, offset, count, verbose, adapter.get());

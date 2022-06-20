@@ -34,7 +34,7 @@ class TraceAdapter
 		 * value for asm.bits
 		 * \p encoding optional per-frame (CPU) mode
 		 */
-		virtual int RizinBits(std::optional<std::string> mode) const;
+		virtual int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const;
 
 		/**
 		 * Get the name of the register in RzReg for a reg name given by the trace.
@@ -87,8 +87,14 @@ class TraceAdapter
 		 */
 		void set_is_big_endian(bool be) { this->big_endian = be; }
 
+
+		void set_mach(uint64_t mach) { this->mach = mach; }
+
+		uint64_t get_mach() { return this->mach; }
+
 	private:
 		bool big_endian = false;
+		uint64_t mach = 0;
 		
 };
 
