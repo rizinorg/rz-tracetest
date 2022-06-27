@@ -6,24 +6,6 @@
 
 #include <rz_asm.h>
 
-/**
- * \brief Returns a vector which holds the memory data from a frame.
- * If \p big_endian_arch is true the bytes in the vector are in big endian.
- * 
- * \param data_ptr Pointer to the frame data.
- * \param size Size of the frame data.
- * \param big_endian_cpu True: The cpu stores data in big endian. False: In little endian.
- * \return std::vector<ut8>*
- */
-std::vector<ut8> ReadFrameMem(const char *data_ptr, ut32 size, bool big_endian_arch) {
-	std::vector<ut8> frame_mem(data_ptr, data_ptr + size);
-	if (big_endian_arch) {
-		// All numbers in the frames are in little endian.
-		std::reverse(frame_mem.begin(), frame_mem.end());
-	}
-	return frame_mem;
-}
-
 static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, TraceAdapter *adapter);
 
 void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 count, int verbose, TraceAdapter *adapter) {
@@ -82,12 +64,12 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, Trace
 	if (frame.has_mode()) {
 		printf("  MODE: %s\n", frame.mode().c_str());
 	}
-	DumpOperandList("  PRE  ", frame.operand_pre_list(), [](const operand_info &, size_t){}, adapter->get_is_big_endian());
-	DumpOperandList("  POST ", frame.operand_post_list(), [](const operand_info &, size_t){}, adapter->get_is_big_endian());
+	DumpOperandList("  PRE  ", frame.operand_pre_list(), [](const operand_info &, size_t){});
+	DumpOperandList("  POST ", frame.operand_post_list(), [](const operand_info &, size_t){});
 	rz_mem_free(hex);
 }
 
-void DumpOperandList(const char *prefix, const operand_value_list &operands, std::function<void(const operand_info &, size_t)> print_detail, bool big_endian_cpu) {
+void DumpOperandList(const char *prefix, const operand_value_list &operands, std::function<void(const operand_info &, size_t)> print_detail) {
 	for (const auto &o : operands.elem()) {
 		size_t real_bits = OperandSizeBits(o);
 		if (o.operand_info_specific().has_reg_operand()) {
@@ -99,8 +81,7 @@ void DumpOperandList(const char *prefix, const operand_value_list &operands, std
 			rz_mem_free(ts);
 		} else if (o.operand_info_specific().has_mem_operand()) {
 			const auto &mo = o.operand_info_specific().mem_operand();
-			ut32 size = o.value().size();
-			char *hex = rz_hex_bin2strdup(ReadFrameMem(o.value().data(), size, big_endian_cpu).data(), size);
+			char *hex = rz_hex_bin2strdup((const ut8 *)o.value().data(), o.value().size());
 			printf("%s[0x%04" PFMT64x "] = %s\n", prefix, (ut64)mo.address(), hex);
 		}
 		print_detail(o, real_bits);
