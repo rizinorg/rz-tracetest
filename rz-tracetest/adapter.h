@@ -67,6 +67,12 @@ class TraceAdapter
 		virtual bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const;
 
 		/**
+		 * Return true if the given reg name is not implemnted in Rizin
+		 * on purpose and can be ignored.
+		 */
+		virtual bool IgnoreUnknownReg(const std::string &rz_reg_name) const;
+
+		/**
 		 * If this returns true, assignments to a variable with the same value as the variable had before
 		 * will be justified even if they are not recorded as post operands.
 		 */

@@ -21,6 +21,10 @@ int TraceAdapter::RizinBits(std::optional<std::string> mode, std::optional<uint6
 	return 0;
 }
 
+bool TraceAdapter::IgnoreUnknownReg(const std::string &rz_reg_name) const {
+	return false;
+}
+
 /**
  * \brief Converts the a register name from the trace to an equivalent register name in Rizin.
  * 
@@ -218,6 +222,10 @@ class PPCTraceAdapter : public TraceAdapter
 
 		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
 			return false;
+		}
+
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+			return rz_reg_name == "ca32" || rz_reg_name == "ov32";
 		}
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
