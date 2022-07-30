@@ -243,8 +243,33 @@ class PPCTraceAdapter : public TraceAdapter
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 1);
 				rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
-			}
-		}
+                        } else if (tracename == "VRSAVE") {
+                          ut64 v = rz_bv_to_ut64(trace_val);
+                          rz_bv_fini(trace_val);
+                          rz_bv_init(trace_val, 32);
+                          rz_bv_set_from_ut64(trace_val, v);
+                        } else if (tracename == "XER") {
+                          // Remove ca32 and ov32 bits
+                          ut64 v = rz_bv_to_ut64(trace_val);
+                          rz_bv_fini(trace_val);
+                          rz_bv_init(trace_val, 64);
+                          ut64 r = v & 0xfffffffffff3ffff;
+                          rz_bv_set_from_ut64(trace_val, r);
+                        }
+                }
+
+                void AdjustRegContentsFromRizin(
+                    const std::string &tracename,
+                    RzBitVector *rizin_val) const override {
+                  if (tracename == "XER") {
+                    // Remove ca32 and ov32 bits
+                    ut64 v = rz_bv_to_ut64(rizin_val);
+                    rz_bv_fini(rizin_val);
+                    rz_bv_init(rizin_val, 64);
+                    ut64 r = v & 0xfffffffffff3ffff;
+                    rz_bv_set_from_ut64(rizin_val, r);
+                  }
+                }
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
