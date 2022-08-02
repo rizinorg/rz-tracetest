@@ -34,7 +34,7 @@ class TraceAdapter
 		 * value for asm.bits
 		 * \p encoding optional per-frame (CPU) mode
 		 */
-		virtual int RizinBits(std::optional<std::string> mode) const;
+		virtual int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const;
 
 		/**
 		 * Get the name of the register in RzReg for a reg name given by the trace.
@@ -67,10 +67,41 @@ class TraceAdapter
 		virtual bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const;
 
 		/**
+		 * Return true if the given reg name is not implemnted in Rizin
+		 * on purpose and can be ignored.
+		 */
+		virtual bool IgnoreUnknownReg(const std::string &rz_reg_name) const;
+
+		/**
 		 * If this returns true, assignments to a variable with the same value as the variable had before
 		 * will be justified even if they are not recorded as post operands.
 		 */
 		virtual bool AllowNoOperandSameValueAssignment() const;
+
+		/**
+		 * \brief Get the is big endian flag
+		 * 
+		 * \return true Instruction bytes are in big endian.
+		 * \return false Instruction bytes are in little endian.
+		 */
+		bool get_is_big_endian() { return this->big_endian; }
+
+		/**
+		 * \brief Set the is big endian flag.
+		 * 
+		 * \param be True if instruction bytes are in big endian. False otherwise.
+		 */
+		void set_is_big_endian(bool be) { this->big_endian = be; }
+
+
+		void set_mach(uint64_t mach) { this->mach = mach; }
+
+		uint64_t get_mach() { return this->mach; }
+
+	private:
+		bool big_endian = false;
+		uint64_t mach = 0;
+		
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch);
