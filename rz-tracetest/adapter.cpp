@@ -27,7 +27,7 @@ bool TraceAdapter::IgnoreUnknownReg(const std::string &rz_reg_name) const {
 
 /**
  * \brief Converts the a register name from the trace to an equivalent register name in Rizin.
- * 
+ *
  * \param tracereg The trace register name.
  * \return std::string The equivalent register name in Rizin.
  */
@@ -70,8 +70,7 @@ bool TraceAdapter::AllowNoOperandSameValueAssignment() const {
 	return false;
 }
 
-class VICETraceAdapter : public TraceAdapter
-{
+class VICETraceAdapter : public TraceAdapter {
 	public:
 		std::string RizinArch() const override { return "6502"; }
 
@@ -120,8 +119,7 @@ class VICETraceAdapter : public TraceAdapter
 		}
 };
 
-class Arm32TraceAdapter : public TraceAdapter
-{
+class Arm32TraceAdapter : public TraceAdapter {
 	public:
 		std::string RizinArch() const override { return "arm"; }
 
@@ -179,8 +177,7 @@ class Arm32TraceAdapter : public TraceAdapter
 		}
 };
 
-class Arm64TraceAdapter : public TraceAdapter
-{
+class Arm64TraceAdapter : public TraceAdapter {
 	public:
 		std::string RizinArch() const override { return "arm"; }
 		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const override { return 64; }
@@ -208,8 +205,7 @@ class Arm64TraceAdapter : public TraceAdapter
 		}
 };
 
-class PPCTraceAdapter : public TraceAdapter
-{
+class PPCTraceAdapter : public TraceAdapter {
 	public:
 		std::string RizinArch() const override { return "ppc"; }
 
@@ -230,16 +226,16 @@ class PPCTraceAdapter : public TraceAdapter
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
 			if (tracereg.substr(0, 3) == "crf") {
-			// crf0 -> cr0
-			return std::string()
-				.append(tracereg.substr(0, 2))
-				.append(tracereg.substr(3, 1));
+				// crf0 -> cr0
+				return std::string()
+					.append(tracereg.substr(0, 2))
+					.append(tracereg.substr(3, 1));
 			}
 			std::string r = tracereg;
 			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
 			return r;
 		}
-		
+
 		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
 			if (tracename.substr(0, 3) == "crf") {
 				ut8 v = rz_bv_to_ut8(trace_val);
@@ -251,46 +247,46 @@ class PPCTraceAdapter : public TraceAdapter
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 1);
 				rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
-                        } else if (tracename == "VRSAVE") {
-                          ut64 v = rz_bv_to_ut64(trace_val);
-                          rz_bv_fini(trace_val);
-                          rz_bv_init(trace_val, 32);
-                          rz_bv_set_from_ut64(trace_val, v);
-                        } else if (tracename == "XER") {
-                          // Remove ca32 and ov32 bits
-                          ut64 v = rz_bv_to_ut64(trace_val);
-                          rz_bv_fini(trace_val);
-                          rz_bv_init(trace_val, 64);
-                          ut64 r = v & 0xfffffffffff3ffff;
-                          rz_bv_set_from_ut64(trace_val, r);
-                        }
-                }
+			} else if (tracename == "VRSAVE") {
+				ut64 v = rz_bv_to_ut64(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 32);
+				rz_bv_set_from_ut64(trace_val, v);
+			} else if (tracename == "XER") {
+				// Remove ca32 and ov32 bits
+				ut64 v = rz_bv_to_ut64(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 64);
+				ut64 r = v & 0xfffffffffff3ffff;
+				rz_bv_set_from_ut64(trace_val, r);
+			}
+		}
 
-                void AdjustRegContentsFromRizin(
-                    const std::string &tracename,
-                    RzBitVector *rizin_val) const override {
-                  if (tracename == "XER") {
-                    // Remove ca32 and ov32 bits
-                    ut64 v = rz_bv_to_ut64(rizin_val);
-                    rz_bv_fini(rizin_val);
-                    rz_bv_init(rizin_val, 64);
-                    ut64 r = v & 0xfffffffffff3ffff;
-                    rz_bv_set_from_ut64(rizin_val, r);
-                  }
-                }
+		void AdjustRegContentsFromRizin(
+			const std::string &tracename,
+			RzBitVector *rizin_val) const override {
+			if (tracename == "XER") {
+				// Remove ca32 and ov32 bits
+				ut64 v = rz_bv_to_ut64(rizin_val);
+				rz_bv_fini(rizin_val);
+				rz_bv_init(rizin_val, 64);
+				ut64 r = v & 0xfffffffffff3ffff;
+				rz_bv_set_from_ut64(rizin_val, r);
+			}
+		}
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
-		case frame_arch_6502:
-			return std::unique_ptr<TraceAdapter>(new VICETraceAdapter());
-		case frame_arch_arm:
-			return std::unique_ptr<TraceAdapter>(new Arm32TraceAdapter());
-		case frame_arch_aarch64:
-			return std::unique_ptr<TraceAdapter>(new Arm64TraceAdapter());
-		case frame_arch_powerpc:
-			return std::unique_ptr<TraceAdapter>(new PPCTraceAdapter());
-		default:
-			return nullptr;
+	case frame_arch_6502:
+		return std::unique_ptr<TraceAdapter>(new VICETraceAdapter());
+	case frame_arch_arm:
+		return std::unique_ptr<TraceAdapter>(new Arm32TraceAdapter());
+	case frame_arch_aarch64:
+		return std::unique_ptr<TraceAdapter>(new Arm64TraceAdapter());
+	case frame_arch_powerpc:
+		return std::unique_ptr<TraceAdapter>(new PPCTraceAdapter());
+	default:
+		return nullptr;
 	}
 }
