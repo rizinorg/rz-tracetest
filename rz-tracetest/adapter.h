@@ -15,15 +15,14 @@
 /*
  * Interface for any arch/source/... specific adjustments
  */
-class TraceAdapter
-{
+class TraceAdapter {
 	public:
 		virtual ~TraceAdapter() {}
 
 		/**
 		 * value for asm.arch/analysis.arch
 		 */
-		virtual std::string RizinArch() const =0;
+		virtual std::string RizinArch() const = 0;
 
 		/**
 		 * value for asm.cpu

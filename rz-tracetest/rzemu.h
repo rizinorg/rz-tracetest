@@ -14,7 +14,7 @@
 #include <memory>
 #include <optional>
 
-class RizinException: public std::exception {
+class RizinException : public std::exception {
 	public:
 		RizinException(const char *fmt, ...) {
 			va_list ap, ap2;
@@ -32,7 +32,7 @@ class RizinException: public std::exception {
 			delete msg;
 		}
 
-		const char* what() const noexcept override { return msg; }
+		const char *what() const noexcept override { return msg; }
 
 	private:
 		char *msg;
