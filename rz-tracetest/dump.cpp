@@ -64,8 +64,8 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, Trace
 	if (frame.has_mode()) {
 		printf("  MODE: %s\n", frame.mode().c_str());
 	}
-	DumpOperandList("  PRE  ", frame.operand_pre_list(), [](const operand_info &, size_t){});
-	DumpOperandList("  POST ", frame.operand_post_list(), [](const operand_info &, size_t){});
+	DumpOperandList("  PRE  ", frame.operand_pre_list(), [](const operand_info &, size_t) {});
+	DumpOperandList("  POST ", frame.operand_post_list(), [](const operand_info &, size_t) {});
 	rz_mem_free(hex);
 }
 

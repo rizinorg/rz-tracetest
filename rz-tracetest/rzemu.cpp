@@ -5,12 +5,12 @@
 #include "dump.h"
 #include "trace.h"
 
-RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg) :
-		adapter(std::move(adapter_arg)),
-		core(rz_core_new(), rz_core_free),
-		reg(rz_reg_new(), rz_reg_free),
-		vm(nullptr, rz_analysis_il_vm_free),
-		validate_ctx(nullptr, rz_il_validate_global_context_free) {
+RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg)
+    : adapter(std::move(adapter_arg)),
+      core(rz_core_new(), rz_core_free),
+      reg(rz_reg_new(), rz_reg_free),
+      vm(nullptr, rz_analysis_il_vm_free),
+      validate_ctx(nullptr, rz_il_validate_global_context_free) {
 	if (!core) {
 		throw RizinException("Failed to create RzCore.");
 	}
@@ -103,9 +103,9 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	}
 
 	struct Disasm {
-		bool failed;
-		std::string disasm_str;
-		std::string hex_str;
+			bool failed;
+			std::string disasm_str;
+			std::string hex_str;
 	};
 	std::optional<Disasm> disasm;
 	auto disassemble = [&]() {
@@ -211,7 +211,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	//////////////////////////////////////////
 	// Check manually disassembled op
 
-	std::unique_ptr<RzAnalysisOp, std::function<void (RzAnalysisOp *)>> aop(rz_analysis_op_new(), [](RzAnalysisOp *op) {
+	std::unique_ptr<RzAnalysisOp, std::function<void(RzAnalysisOp *)>> aop(rz_analysis_op_new(), [](RzAnalysisOp *op) {
 		rz_analysis_op_free(op);
 	});
 	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), (const ut8 *)code.data(), code.size(), RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
@@ -398,7 +398,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		bool justified = false;
 		switch (ev->type) {
 		case RZ_IL_EVENT_VAR_READ: {
-			auto check_oplist = [&](const ::google::protobuf::RepeatedPtrField< ::operand_info> & l) {
+			auto check_oplist = [&](const ::google::protobuf::RepeatedPtrField<::operand_info> &l) {
 				for (const auto &o : l) {
 					if (!o.operand_info_specific().has_reg_operand()) {
 						continue;
