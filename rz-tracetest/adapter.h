@@ -31,9 +31,8 @@ class TraceAdapter {
 
 		/**
 		 * value for asm.bits
-		 * \p encoding optional per-frame (CPU) mode
 		 */
-		virtual int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> mach) const;
+		virtual int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const;
 
 		/**
 		 * Get the name of the register in RzReg for a reg name given by the trace.
@@ -79,7 +78,7 @@ class TraceAdapter {
 
 		/**
 		 * \brief Get the is big endian flag
-		 * 
+		 *
 		 * \return true Instruction bytes are in big endian.
 		 * \return false Instruction bytes are in little endian.
 		 */
@@ -87,20 +86,18 @@ class TraceAdapter {
 
 		/**
 		 * \brief Set the is big endian flag.
-		 * 
+		 *
 		 * \param be True if instruction bytes are in big endian. False otherwise.
 		 */
 		void set_is_big_endian(bool be) { this->big_endian = be; }
 
+		void set_machine(uint64_t machine) { this->machine = machine; }
 
-		void set_mach(uint64_t mach) { this->mach = mach; }
-
-		uint64_t get_mach() { return this->mach; }
+		uint64_t get_machine() { return this->machine; }
 
 	private:
 		bool big_endian = false;
-		uint64_t mach = 0;
-		
+		uint64_t machine = 0;
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch);
