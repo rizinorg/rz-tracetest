@@ -28,6 +28,13 @@ int TraceAdapter::RizinBits(std::optional<std::string> mode, std::optional<uint6
 	return 0;
 }
 
+/**
+ * \brief Returns if a given register name from the trace should be ignored if it isn't implemented in Rizin.
+ *
+ * \param rz_reg_name The trace register name.
+ * \return true The register, missing in Rizin, should be ignored.
+ * \return false Notify the user about the missing register in Rizin.
+ */
 bool TraceAdapter::IgnoreUnknownReg(const std::string &rz_reg_name) const {
 	return false;
 }
