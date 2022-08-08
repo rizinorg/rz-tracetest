@@ -17,63 +17,22 @@ std::string TraceAdapter::RizinCPU() const {
 	return std::string();
 }
 
-/**
- * \brief Returns the bits for asm.bits.
- *
- * \param mode The frame mode from TraceContainerReader.
- * \param machine The machine type from TraceContainerReader.
- * \return int The architecture bits of the trace.
- */
 int TraceAdapter::RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const {
 	return 0;
 }
 
-/**
- * \brief Returns if a given register name from the trace should be ignored if it isn't implemented in Rizin.
- *
- * \param rz_reg_name The trace register name.
- * \return true The register, missing in Rizin, should be ignored.
- * \return false Notify the user about the missing register in Rizin.
- */
 bool TraceAdapter::IgnoreUnknownReg(const std::string &rz_reg_name) const {
 	return false;
 }
 
-/**
- * \brief Converts the a register name from the trace to an equivalent register name in Rizin.
- *
- * \param tracereg The trace register name.
- * \return std::string The equivalent register name in Rizin.
- */
 std::string TraceAdapter::TraceRegToRizin(const std::string &tracereg) const {
 	return tracereg;
 }
 
-/**
- * \brief Manipulates the content of a register before it is compared to Rizin.
- *
- * \param tracename The register name in the trace.
- * \param trace_val The register content to manipulate.
- * \param op The RzAnalysisOp this register belongs to.
- */
 void TraceAdapter::AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const {}
 
-/**
- * \brief Manipulates the content of a register before before it is compared to the trace.
- *
- * \param tracename The register name in the trace.
- * \param trace_val The register content to manipulate.
- * \param op The RzAnalysisOp this register belongs to.
- */
 void TraceAdapter::AdjustRegContentsFromRizin(const std::string &tracename, RzBitVector *rizin_val) const {}
 
-/**
- * \brief Prints the register content with more details. Useful for printing fields in registers with their descriptions or names.
- *
- * \param tracename Register name in the trace.
- * \param data The register content.
- * \param bits_size Size of the register.
- */
 void TraceAdapter::PrintRegisterDetails(const std::string &tracename, const std::string &data, size_t bits_size) const {}
 
 bool TraceAdapter::IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const {
