@@ -104,7 +104,7 @@ int main(int argc, const char *argv[]) {
 	if (!adapter) {
 		throw RizinException("Failed to match frame_architecture %d to TraceAdapter.\n", (int)trace.get_arch());
 	}
-	adapter->SetMachine(trace.GetMachine());
+	adapter->SetMachine(trace.get_machine());
 	adapter.get()->SetIsBigEndian(big_endian);
 	if (dump_only) {
 		DumpTrace(trace, offset, count, verbose, adapter.get());

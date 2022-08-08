@@ -23,7 +23,7 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 
 	printf("trace version: %" PFMT64u "\n", (ut64)trace.get_trace_version());
 	printf("arch: %" PFMT64u "\n", (ut64)trace.get_arch());
-	printf("mach: %" PFMT64u "\n", (ut64)trace.GetMachine());
+	printf("mach: %" PFMT64u "\n", (ut64)trace.get_machine());
 	printf("number of frames: %" PFMT64u "\n", (ut64)trace.get_num_frames());
 	const meta_frame *meta = trace.get_meta();
 	printf("META:\n%s\n======================================\n\n", meta->DebugString().c_str());
