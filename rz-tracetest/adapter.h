@@ -82,18 +82,18 @@ class TraceAdapter {
 		 * \return true Instruction bytes are in big endian.
 		 * \return false Instruction bytes are in little endian.
 		 */
-		bool get_is_big_endian() { return this->big_endian; }
+		bool IsBigEndian() { return this->big_endian; }
 
 		/**
 		 * \brief Set the is big endian flag.
 		 *
 		 * \param be True if instruction bytes are in big endian. False otherwise.
 		 */
-		void set_is_big_endian(bool be) { this->big_endian = be; }
+		void SetIsBigEndian(bool be) { this->big_endian = be; }
 
-		void set_machine(uint64_t machine) { this->machine = machine; }
+		void SetMachine(uint64_t machine) { this->machine = machine; }
 
-		uint64_t get_machine() { return this->machine; }
+		uint64_t GetMachine() { return this->machine; }
 
 	private:
 		bool big_endian = false;

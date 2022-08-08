@@ -14,16 +14,16 @@ void DumpTrace(SerializedTrace::TraceContainerReader &trace, ut64 offset, ut64 c
 		rzasm.reset(rz_asm_new());
 		rz_asm_use(rzasm.get(), adapter->RizinArch().c_str());
 		rz_asm_set_cpu(rzasm.get(), adapter->RizinCPU().c_str());
-		int bits = adapter->RizinBits(std::nullopt, adapter->get_machine());
+		int bits = adapter->RizinBits(std::nullopt, adapter->GetMachine());
 		if (bits) {
 			rz_asm_set_bits(rzasm.get(), bits);
 		}
-		rz_asm_set_big_endian(rzasm.get(), adapter->get_is_big_endian());
+		rz_asm_set_big_endian(rzasm.get(), adapter->IsBigEndian());
 	}
 
 	printf("trace version: %" PFMT64u "\n", (ut64)trace.get_trace_version());
 	printf("arch: %" PFMT64u "\n", (ut64)trace.get_arch());
-	printf("mach: %" PFMT64u "\n", (ut64)trace.get_machine());
+	printf("mach: %" PFMT64u "\n", (ut64)trace.GetMachine());
 	printf("number of frames: %" PFMT64u "\n", (ut64)trace.get_num_frames());
 	const meta_frame *meta = trace.get_meta();
 	printf("META:\n%s\n======================================\n\n", meta->DebugString().c_str());
@@ -51,11 +51,11 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, Trace
 	char *hex = rz_hex_bin2strdup((const ut8 *)frame.rawbytes().data(), frame.rawbytes().size());
 	printf(Color_BCYAN "-- %5" PFMT64u "    0x%" PFMT64x "    %s", index, (ut64)frame.address(), hex);
 	if (rzasm) {
-		int bits = adapter->RizinBits(frame.has_mode() ? std::make_optional(frame.mode()) : std::nullopt, adapter->get_machine());
+		int bits = adapter->RizinBits(frame.has_mode() ? std::make_optional(frame.mode()) : std::nullopt, adapter->GetMachine());
 		if (bits) {
 			rz_asm_set_bits(rzasm, bits);
 		}
-		rz_asm_set_big_endian(rzasm, adapter->get_is_big_endian());
+		rz_asm_set_big_endian(rzasm, adapter->IsBigEndian());
 		char *disasm = rz_asm_to_string(rzasm, frame.address(), (const ut8 *)frame.rawbytes().data(), frame.rawbytes().size());
 		printf("    %s", disasm ? rz_str_trim_tail(disasm) : "(null)");
 		rz_mem_free(disasm);

@@ -5,7 +5,7 @@
 
 #include <memory>
 
-static bool is_one_bit_flag(const std::string &tn) {
+static inline bool IsOneBitFlag(const std::string &tn) {
 	// PPC
 	if (tn == "ca" || tn == "ca32" || tn == "ov" || tn == "ov32" || tn == "so") {
 		return true;
@@ -256,7 +256,7 @@ class PPCTraceAdapter : public TraceAdapter {
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 4);
 				rz_bv_set_from_ut64(trace_val, v);
-			} else if (is_one_bit_flag(tracename)) {
+			} else if (IsOneBitFlag(tracename)) {
 				bool set = !rz_bv_is_zero_vector(trace_val);
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 1);
