@@ -12,6 +12,9 @@
 #include <string>
 #include <optional>
 
+// Mask to exclude ISA3 flags (ca32, ov32).
+#define PPC_XER_ISA2_BITS_MASK 0xfffffffffff3ffff
+
 /*
  * Interface for any arch/source/... specific adjustments
  */

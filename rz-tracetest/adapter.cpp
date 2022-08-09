@@ -230,7 +230,7 @@ class PPCTraceAdapter : public TraceAdapter {
 				ut64 v = rz_bv_to_ut64(trace_val);
 				rz_bv_fini(trace_val);
 				rz_bv_init(trace_val, 64);
-				ut64 r = v & 0xfffffffffff3ffff;
+				ut64 r = v & PPC_XER_ISA2_BITS_MASK;
 				rz_bv_set_from_ut64(trace_val, r);
 			}
 		}
@@ -243,7 +243,7 @@ class PPCTraceAdapter : public TraceAdapter {
 				ut64 v = rz_bv_to_ut64(rizin_val);
 				rz_bv_fini(rizin_val);
 				rz_bv_init(rizin_val, 64);
-				ut64 r = v & 0xfffffffffff3ffff;
+				ut64 r = v & PPC_XER_ISA2_BITS_MASK;
 				rz_bv_set_from_ut64(rizin_val, r);
 			}
 		}
