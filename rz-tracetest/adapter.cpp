@@ -5,12 +5,24 @@
 
 #include <memory>
 
+static inline bool IsOneBitFlag(const std::string &tn) {
+	// PPC
+	if (tn == "ca" || tn == "ca32" || tn == "ov" || tn == "ov32" || tn == "so") {
+		return true;
+	}
+	return false;
+}
+
 std::string TraceAdapter::RizinCPU() const {
 	return std::string();
 }
 
-int TraceAdapter::RizinBits(std::optional<std::string> mode) const {
+int TraceAdapter::RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const {
 	return 0;
+}
+
+bool TraceAdapter::IgnoreUnknownReg(const std::string &rz_reg_name) const {
+	return false;
 }
 
 std::string TraceAdapter::TraceRegToRizin(const std::string &tracereg) const {
@@ -84,7 +96,7 @@ class Arm32TraceAdapter : public TraceAdapter {
 	public:
 		std::string RizinArch() const override { return "arm"; }
 
-		int RizinBits(std::optional<std::string> mode) const override {
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
 			return (mode && mode.value() == FRAME_MODE_ARM_T32) ? 16 : 32;
 		}
 
@@ -141,7 +153,7 @@ class Arm32TraceAdapter : public TraceAdapter {
 class Arm64TraceAdapter : public TraceAdapter {
 	public:
 		std::string RizinArch() const override { return "arm"; }
-		int RizinBits(std::optional<std::string> mode) const override { return 64; }
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override { return 64; }
 
 		std::string TraceRegToRizin(const std::string &tracereg) const override {
 			if (tracereg == "R31") {
@@ -166,6 +178,77 @@ class Arm64TraceAdapter : public TraceAdapter {
 		}
 };
 
+class PPCTraceAdapter : public TraceAdapter {
+	public:
+		std::string RizinArch() const override { return "ppc"; }
+
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
+			if (mode) {
+				return (mode.value() == FRAME_MODE_PPC64) ? 64 : 32;
+			}
+			return machine.value();
+		}
+
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			return false;
+		}
+
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+			return rz_reg_name == "ca32" || rz_reg_name == "ov32";
+		}
+
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			if (tracereg.substr(0, 3) == "crf") {
+				// crf0 -> cr0
+				return std::string()
+					.append(tracereg.substr(0, 2))
+					.append(tracereg.substr(3, 1));
+			}
+			std::string r = tracereg;
+			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+			return r;
+		}
+
+		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
+			if (tracename.substr(0, 3) == "crf") {
+				ut8 v = rz_bv_to_ut8(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 4);
+				rz_bv_set_from_ut64(trace_val, v);
+			} else if (IsOneBitFlag(tracename)) {
+				bool set = !rz_bv_is_zero_vector(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 1);
+				rz_bv_set_from_ut64(trace_val, set ? 1 : 0);
+			} else if (tracename == "VRSAVE") {
+				ut64 v = rz_bv_to_ut64(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 32);
+				rz_bv_set_from_ut64(trace_val, v);
+			} else if (tracename == "XER") {
+				// Remove ca32 and ov32 bits
+				ut64 v = rz_bv_to_ut64(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 64);
+				ut64 r = v & PPC_XER_ISA2_BITS_MASK;
+				rz_bv_set_from_ut64(trace_val, r);
+			}
+		}
+
+		void AdjustRegContentsFromRizin(
+			const std::string &tracename,
+			RzBitVector *rizin_val) const override {
+			if (tracename == "XER") {
+				// Remove ca32 and ov32 bits
+				ut64 v = rz_bv_to_ut64(rizin_val);
+				rz_bv_fini(rizin_val);
+				rz_bv_init(rizin_val, 64);
+				ut64 r = v & PPC_XER_ISA2_BITS_MASK;
+				rz_bv_set_from_ut64(rizin_val, r);
+			}
+		}
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 	case frame_arch_6502:
@@ -174,6 +257,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 		return std::unique_ptr<TraceAdapter>(new Arm32TraceAdapter());
 	case frame_arch_aarch64:
 		return std::unique_ptr<TraceAdapter>(new Arm64TraceAdapter());
+	case frame_arch_powerpc:
+		return std::unique_ptr<TraceAdapter>(new PPCTraceAdapter());
 	default:
 		return nullptr;
 	}

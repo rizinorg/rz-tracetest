@@ -11,6 +11,7 @@ static int help(bool verbose) {
 	if (verbose) {
 		printf(" -c [count]    number of frames to check, default: all\n");
 		printf(" -d            dump trace as text, but do not run or test anything\n");
+		printf(" -b            Interpret instruction bytes in the frames in big endian\n");
 		printf(" -e            fail early/stop at the first error\n");
 		printf(" -u            fail early/stop at the first unlifted execption\n");
 		printf(" -r            fail early/stop at the first runtime error\n");
@@ -33,12 +34,14 @@ int main(int argc, const char *argv[]) {
 	bool fail_unlifted = false;
 	bool fail_runtime = false;
 	bool fail_misexec = false;
+	bool big_endian = false;
 	int verbose = 0;
 	std::optional<std::regex> skip_re;
 
 	RzGetopt opt;
-	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idvs:eurm");
+	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idbvs:eurm");
 	int c;
+
 	while ((c = rz_getopt_next(&opt)) != -1) {
 		switch (c) {
 		case 'h':
@@ -51,6 +54,9 @@ int main(int argc, const char *argv[]) {
 			break;
 		case 'i':
 			invalid_op_quiet = true;
+			break;
+		case 'b':
+			big_endian = true;
 			break;
 		case 'd':
 			dump_only = true;
@@ -95,12 +101,14 @@ int main(int argc, const char *argv[]) {
 
 	SerializedTrace::TraceContainerReader trace(argv[opt.ind]);
 	auto adapter = SelectTraceAdapter(trace.get_arch());
+	if (!adapter) {
+		throw RizinException("Failed to match frame_architecture %d to TraceAdapter.\n", (int)trace.get_arch());
+	}
+	adapter->SetMachine(trace.get_machine());
+	adapter.get()->SetIsBigEndian(big_endian);
 	if (dump_only) {
 		DumpTrace(trace, offset, count, verbose, adapter.get());
 		return 0;
-	}
-	if (!adapter) {
-		throw RizinException("Failed to match frame_architecture %d to TraceAdapter.\n", (int)trace.get_arch());
 	}
 	RizinEmulator r(std::move(adapter));
 	trace.seek(offset);

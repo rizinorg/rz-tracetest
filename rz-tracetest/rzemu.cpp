@@ -22,10 +22,11 @@ RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg)
 	if (!cpu.empty()) {
 		rz_config_set(core->config, "asm.cpu", cpu.c_str());
 	}
-	int bits = adapter->RizinBits(std::nullopt);
+	int bits = adapter->RizinBits(std::nullopt, adapter->GetMachine());
 	if (bits) {
 		rz_config_set_i(core->config, "asm.bits", bits);
 	}
+	rz_config_set_b(core->config, "cfg.bigendian", adapter->IsBigEndian());
 	char *reg_profile = rz_analysis_get_reg_profile(core->analysis);
 	if (!reg_profile) {
 		throw RizinException("Failed to get reg profile.");
@@ -96,7 +97,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	const std_frame &sf = f->std_frame();
 	const std::string &code = sf.rawbytes();
 
-	int need_bits = adapter->RizinBits(sf.has_mode() ? std::make_optional(sf.mode()) : std::nullopt);
+	int need_bits = adapter->RizinBits(sf.has_mode() ? std::make_optional(sf.mode()) : std::nullopt, adapter->GetMachine());
 	if (need_bits && need_bits != core->rasm->bits) {
 		rz_config_set_i(core->config, "asm.bits", need_bits);
 	}
@@ -332,7 +333,9 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			}
 			RzRegItem *ri = rz_reg_get(reg.get(), rn.c_str(), RZ_REG_TYPE_ANY);
 			if (!ri) {
-				printf("Unknown reg: %s\n", ro.name().c_str());
+				if (!adapter->IgnoreUnknownReg(ro.name())) {
+					printf("Unknown reg: %s\n", ro.name().c_str());
+				}
 				continue;
 			}
 			RzBitVector *tbv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
