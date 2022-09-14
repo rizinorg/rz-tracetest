@@ -184,8 +184,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			}
 			RzRegItem *ri = rz_reg_get(reg.get(), rn.c_str(), RZ_REG_TYPE_ANY);
 			if (!ri) {
-				print_disasm();
+				if (adapter->IgnoreUnknownReg(ro.name())) {
+					continue;
+				}
 				printf("Unknown reg: %s\n", ro.name().c_str());
+				print_disasm();
 				continue;
 			}
 			RzBitVector *bv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
