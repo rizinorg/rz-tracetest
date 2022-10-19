@@ -259,10 +259,7 @@ class X86TraceAdapter : public TraceAdapter {
 	}
 
 	int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
-		if (mode) {
-			return (mode.value() == FRAME_MODE_X86_64) ? 64 : 32;
-		}
-		return machine.value();
+		return (machine && machine.value() == frame_mach_x86_64) ? 64 : 32;
 	}
 
 	virtual std::string TraceRegToRizin(const std::string &tracereg) const override {
