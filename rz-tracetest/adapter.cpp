@@ -404,10 +404,6 @@ class X86TraceAdapter : public TraceAdapter {
 		return "x86";
 	}
 
-	std::string RizinCPU() const override {
-		return "x86";
-	}
-
 	int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
 		return (machine && machine.value() == frame_mach_x86_64) ? 64 : 32;
 	}
