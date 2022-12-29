@@ -258,6 +258,10 @@ class X86TraceAdapter : public TraceAdapter {
 		return (machine && machine.value() == frame_mach_x86_64) ? 64 : 32;
 	}
 
+	bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+		return false;
+	}
+
 	virtual std::string TraceRegToRizin(const std::string &tracereg) const override {
 		std::string r = tracereg;
 		std::transform(r.begin(), r.end(), r.begin(), ::tolower);
