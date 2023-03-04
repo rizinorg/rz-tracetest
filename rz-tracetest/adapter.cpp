@@ -249,6 +249,23 @@ class PPCTraceAdapter : public TraceAdapter {
 		}
 };
 
+class I8051TraceAdapter : public TraceAdapter {
+	public:
+		std::string RizinArch() const override { return "8051"; }
+
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
+			return 16;
+		}
+
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			return false;
+		}
+
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+			return true;
+		}
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 	case frame_arch_6502:
@@ -259,6 +276,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 		return std::unique_ptr<TraceAdapter>(new Arm64TraceAdapter());
 	case frame_arch_powerpc:
 		return std::unique_ptr<TraceAdapter>(new PPCTraceAdapter());
+	case frame_arch_8051:
+		return std::unique_ptr<TraceAdapter>(new I8051TraceAdapter());
 	default:
 		return nullptr;
 	}
