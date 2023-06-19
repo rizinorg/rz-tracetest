@@ -236,7 +236,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		print_disasm();
 		RzStrBuf sb;
 		rz_strbuf_init(&sb);
-		rz_il_op_effect_stringify(aop->il_op, &sb);
+		rz_il_op_effect_stringify(aop->il_op, &sb, false);
 		printf("%s\n", rz_strbuf_get(&sb));
 		rz_strbuf_fini(&sb);
 		printf("Validation failed: %s\n", validate_report);
@@ -278,7 +278,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		exec_info_printed = true;
 		RzStrBuf sb;
 		rz_strbuf_init(&sb);
-		rz_il_op_effect_stringify(aop->il_op, &sb);
+		rz_il_op_effect_stringify(aop->il_op, &sb, false);
 		printf("%s\n\n", rz_strbuf_get(&sb));
 
 		auto print_operands = [this](const operand_value_list &operands) {
