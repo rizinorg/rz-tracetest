@@ -266,6 +266,25 @@ class I8051TraceAdapter : public TraceAdapter {
 		}
 };
 
+class MipsTraceAdapter : public TraceAdapter {
+	public:
+		std::string RizinArch() const override {
+			return "mips";
+		}
+
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
+			return machine.value();
+		}
+
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			return false;
+		}
+
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+			return true;
+		}
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 	case frame_arch_6502:
@@ -278,6 +297,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 		return std::unique_ptr<TraceAdapter>(new PPCTraceAdapter());
 	case frame_arch_8051:
 		return std::unique_ptr<TraceAdapter>(new I8051TraceAdapter());
+	case frame_arch_mips:
+		return std::unique_ptr<TraceAdapter>(new MipsTraceAdapter());
 	default:
 		return nullptr;
 	}
