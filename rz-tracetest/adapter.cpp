@@ -273,9 +273,6 @@ class MipsTraceAdapter : public TraceAdapter {
 		}
 
 		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
-			// if (mode) {
-			// 	return (mode.value() == FRAME_MODE_MIPS64) ? 64 : 32;
-			// }
 			return machine.value();
 		}
 
