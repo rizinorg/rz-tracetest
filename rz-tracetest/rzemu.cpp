@@ -175,6 +175,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	rz_reg_arena_zero(reg.get(), RZ_REG_TYPE_ANY);
 
 	rz_io_write_at(io, sf.address(), (const ut8 *)code.data(), code.size());
+
 	for (const auto &o : sf.operand_pre_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
@@ -192,7 +193,8 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 				continue;
 			}
 			RzBitVector *bv = rz_bv_new_from_bytes_le((const ut8 *)o.value().data(), 0, RegOperandSizeBits(o));
-			adapter->AdjustRegContentsFromTrace(ro.name(), bv);
+			RzBitVector *extra = rz_reg_get_bv(reg.get(), ri);
+			adapter->AdjustRegContentsFromTrace(ro.name(), bv, extra);
 			if (rz_bv_len(bv) != ri->size) {
 				print_disasm();
 				printf("Can't apply reg value of %s (%s) because its size (%u) is not equal to the one in RzReg (%u)\n",
