@@ -10,7 +10,8 @@ RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg)
       core(rz_core_new(), rz_core_free),
       reg(rz_reg_new(), rz_reg_free),
       vm(nullptr, rz_analysis_il_vm_free),
-      validate_ctx(nullptr, rz_il_validate_global_context_free) {
+      validate_ctx(nullptr, rz_il_validate_global_context_free),
+      prettify_il(false) {
 	if (!core) {
 		throw RizinException("Failed to create RzCore.");
 	}
@@ -236,7 +237,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		print_disasm();
 		RzStrBuf sb;
 		rz_strbuf_init(&sb);
-		rz_il_op_effect_stringify(aop->il_op, &sb, false);
+		rz_il_op_effect_stringify(aop->il_op, &sb, prettify_il);
 		printf("%s\n", rz_strbuf_get(&sb));
 		rz_strbuf_fini(&sb);
 		printf("Validation failed: %s\n", validate_report);
@@ -278,7 +279,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		exec_info_printed = true;
 		RzStrBuf sb;
 		rz_strbuf_init(&sb);
-		rz_il_op_effect_stringify(aop->il_op, &sb, false);
+		rz_il_op_effect_stringify(aop->il_op, &sb, prettify_il);
 		printf("%s\n\n", rz_strbuf_get(&sb));
 
 		auto print_operands = [this](const operand_value_list &operands) {

@@ -56,6 +56,7 @@ class RizinEmulator {
 		std::unique_ptr<RzReg, decltype(&rz_reg_free)> reg;
 		std::unique_ptr<RzAnalysisILVM, decltype(&rz_analysis_il_vm_free)> vm;
 		std::unique_ptr<RzILValidateGlobalContext, decltype(&rz_il_validate_global_context_free)> validate_ctx;
+		bool prettify_il;
 
 		bool TraceRegOverlapsILVar(const char *tracereg, const char *var);
 
@@ -63,6 +64,9 @@ class RizinEmulator {
 		RizinEmulator(std::unique_ptr<TraceAdapter> adapter);
 		FrameCheckResult RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet,
 			std::optional<std::function<bool(const std::string &)>> skip_by_disasm);
+		void SetPrettyIL(bool value) {
+			this->prettify_il = value;
+		}
 };
 
 #endif

@@ -31,6 +31,11 @@ target_include_directories(trace
 	PUBLIC "${LIBTRACE_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(trace ${Protobuf_LIBRARIES})
 
+if (${Protobuf_VERSION} VERSION_GREATER_EQUAL "4.22.0")
+	# there is a bug where the Protobuf_LIBRARIES does not include the following libs.
+	target_link_libraries(trace absl_log_internal_message absl_log_internal_check_op)
+endif()
+
 add_executable(readtrace "${LIBTRACE_SOURCE_DIR}/readtrace.cpp")
 target_link_libraries(readtrace trace)
 add_executable(copytrace "${LIBTRACE_SOURCE_DIR}/copytrace.cpp")
