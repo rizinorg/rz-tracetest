@@ -1,0 +1,44 @@
+name: "CI Job"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+# Automatically cancel any previous workflow on new push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Dependencies
+        run: sudo apt install libprotobuf-dev protobuf-compiler ninja-build meson build-essential cmake git
+
+      - name: Build Rizin
+        run: |
+            git clone --depth=1 https://github.com/rizinorg/rizin.git
+            cd rizin
+            meson build
+            ninja -C build
+            sudo ninja -C build install
+            cd ..
+            
+      - name: Build
+        run: |
+            cd rz-tracetest
+            cmake -Bbuild -GNinja
+            ninja -C build
+            
