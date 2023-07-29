@@ -7,7 +7,7 @@
 #include <regex>
 
 static int help(bool verbose) {
-	printf("Usage: rz-tracetest [-dehiv] [-c count] [-o offset] [-s regex] <filename>.frames\n");
+	printf("Usage: rz-tracetest [-dbeurmphiv] [-c count] [-o offset] [-s regex] <filename>.frames\n");
 	if (verbose) {
 		printf(" -c [count]    number of frames to check, default: all\n");
 		printf(" -d            dump trace as text, but do not run or test anything\n");
@@ -16,6 +16,7 @@ static int help(bool verbose) {
 		printf(" -u            fail early/stop at the first unlifted execption\n");
 		printf(" -r            fail early/stop at the first runtime error\n");
 		printf(" -m            fail early/stop at the first execution mismatch\n");
+		printf(" -p            prettify IL outputs\n");
 		printf(" -h            show help message\n");
 		printf(" -i            do not print unlifted instructions verbosely\n");
 		printf(" -o [offset]   index of the first frame to check, default: 0\n");
@@ -35,11 +36,12 @@ int main(int argc, const char *argv[]) {
 	bool fail_runtime = false;
 	bool fail_misexec = false;
 	bool big_endian = false;
+	bool prettify_il = false;
 	int verbose = 0;
 	std::optional<std::regex> skip_re;
 
 	RzGetopt opt;
-	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idbvs:eurm");
+	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idbvs:eurmp");
 	int c;
 
 	while ((c = rz_getopt_next(&opt)) != -1) {
@@ -72,6 +74,9 @@ int main(int argc, const char *argv[]) {
 			break;
 		case 'm':
 			fail_misexec = true;
+			break;
+		case 'p':
+			prettify_il = true;
 			break;
 		case 's':
 			if (skip_re) {
@@ -111,6 +116,7 @@ int main(int argc, const char *argv[]) {
 		return 0;
 	}
 	RizinEmulator r(std::move(adapter));
+	r.SetPrettyIL(prettify_il);
 	trace.seek(offset);
 	ut64 stats[FRAME_CHECK_RESULT_COUNT] = {};
 	std::unique_ptr<frame> cur_frame = trace.get_frame();
