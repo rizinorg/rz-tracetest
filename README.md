@@ -16,10 +16,12 @@ Trace sources
 The following sources are currently known to produce meaningful results with
 rz-tracetest:
 
-* [VICE](https://github.com/rizinorg/vice) Patched VICE emulator for testing
-  6502.
 * [QEMU](https://github.com/BinaryAnalysisPlatform/qemu) Patched for the BAP
   project. Specifically useful for ARM and potentially later x86 too.
+* [VICE](https://github.com/rizinorg/vice) Patched VICE emulator for testing
+  6502.
+* [SameBoy](https://github.com/rizinorg/SameBoy) Patched Game Boy emulator for
+  testing gb (sm83)
 
 Other sources which have not been tested with rz-tracetest specifically yet:
 
