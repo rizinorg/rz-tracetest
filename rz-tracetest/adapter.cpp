@@ -331,6 +331,25 @@ class GBTraceAdapter : public TraceAdapter {
 		}
 };
 
+class HexagonTraceAdapter : public TraceAdapter {
+	public:
+		std::string RizinArch() const override {
+			return "hexagon";
+		}
+
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
+			return machine.value();
+		}
+
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			return false;
+		}
+
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+			return false;
+		}
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 	case frame_arch_6502:
@@ -347,6 +366,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 		return std::unique_ptr<TraceAdapter>(new MipsTraceAdapter());
 	case frame_arch_sm83:
 		return std::unique_ptr<TraceAdapter>(new GBTraceAdapter());
+	case frame_arch_hexagon:
+		return std::unique_ptr<TraceAdapter>(new HexagonTraceAdapter());
 	default:
 		return nullptr;
 	}
