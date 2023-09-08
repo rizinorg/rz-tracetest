@@ -193,7 +193,7 @@ class PPCTraceAdapter : public TraceAdapter {
 			return false;
 		}
 
-		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
 			return rz_reg_name == "ca32" || rz_reg_name == "ov32";
 		}
 
@@ -261,7 +261,7 @@ class I8051TraceAdapter : public TraceAdapter {
 			return false;
 		}
 
-		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
 			return true;
 		}
 };
@@ -280,7 +280,53 @@ class MipsTraceAdapter : public TraceAdapter {
 			return false;
 		}
 
-		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
+			return true;
+		}
+};
+
+class GBTraceAdapter : public TraceAdapter {
+	public:
+		std::string RizinArch() const override {
+			return "gb";
+		}
+
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			if (tracereg == "pc") {
+				// Rizin extends pc to 32bit mpc
+				return "mpc";
+			}
+			return tracereg;
+		}
+
+		void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op) const override {
+			if (tracename == "pc") {
+				// Rizin extends pc to 32bit mpc
+				ut16 v = rz_bv_to_ut16(trace_val);
+				rz_bv_fini(trace_val);
+				rz_bv_init(trace_val, 32);
+				rz_bv_set_from_ut64(trace_val, v);
+			}
+		}
+
+		void PrintRegisterDetails(const std::string &tracename, const std::string &data, size_t bits_size) const override {
+			if (tracename == "f") {
+				if (bits_size != 8) {
+					return;
+				}
+				ut8 f = data[0];
+				printf("    0  %#04x     = %d\n", 1 << 0, (f & (1 << 0)) != 0);
+				printf("    1  %#04x     = %d\n", 1 << 1, (f & (1 << 1)) != 0);
+				printf("    2  %#04x     = %d\n", 1 << 2, (f & (1 << 2)) != 0);
+				printf("    3  %#04x     = %d\n", 1 << 3, (f & (1 << 3)) != 0);
+				printf("    4  %#04x  C  = %d\n", 1 << 4, (f & (1 << 4)) != 0);
+				printf("    5  %#04x  H  = %d\n", 1 << 5, (f & (1 << 5)) != 0);
+				printf("    6  %#04x  N  = %d\n", 1 << 6, (f & (1 << 6)) != 0);
+				printf("    7  %#04x  Z  = %d\n", 1 << 7, (f & (1 << 7)) != 0);
+			}
+		}
+
+		bool AllowNoOperandSameValueAssignment() const override {
 			return true;
 		}
 };
@@ -299,6 +345,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 		return std::unique_ptr<TraceAdapter>(new I8051TraceAdapter());
 	case frame_arch_mips:
 		return std::unique_ptr<TraceAdapter>(new MipsTraceAdapter());
+	case frame_arch_sm83:
+		return std::unique_ptr<TraceAdapter>(new GBTraceAdapter());
 	default:
 		return nullptr;
 	}
