@@ -345,7 +345,7 @@ class HexagonTraceAdapter : public TraceAdapter {
 			return false;
 		}
 
-		bool IgnoreUnknownReg(const std::string &rz_reg_name) const {
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
 			return false;
 		}
 };
