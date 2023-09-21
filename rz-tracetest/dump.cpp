@@ -57,7 +57,18 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, Trace
 		}
 		rz_asm_set_big_endian(rzasm, adapter->IsBigEndian());
 		char *disasm = rz_asm_to_string(rzasm, frame.address(), (const ut8 *)frame.rawbytes().data(), frame.rawbytes().size());
-		printf("    %s", disasm ? rz_str_trim_tail(disasm) : "(null)");
+		if (!disasm) {
+			printf("    (null)");
+		} else {
+			char *disasm_trimmed = rz_str_trim_tail(disasm);
+			printf("    ");
+			if (strchr(disasm_trimmed, '\n')) {
+				// Asm string with multiple lines.
+				// Start disassembly to next line.
+				printf("\n");
+			}
+			printf("%s", disasm);
+		}
 		rz_mem_free(disasm);
 	}
 	printf(Color_RESET "\n");
