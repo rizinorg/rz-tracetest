@@ -338,7 +338,7 @@ class HexagonTraceAdapter : public TraceAdapter {
 		}
 
 		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
-			return machine.value();
+			return 32;
 		}
 
 		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
