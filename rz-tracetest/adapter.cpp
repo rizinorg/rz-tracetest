@@ -348,6 +348,15 @@ class HexagonTraceAdapter : public TraceAdapter {
 		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
 			return false;
 		}
+
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			std::string r = tracereg.substr(0, tracereg.find_first_of("_tmp"));
+			std::transform(r.begin(), r.end(), r.begin(), ::toupper);
+			if (tracereg.find_first_of("_tmp") != std::string::npos) {
+				return r += "_tmp";
+			}
+			return r;
+		}
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
