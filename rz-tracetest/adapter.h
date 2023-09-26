@@ -59,6 +59,7 @@ class TraceAdapter {
 		 * \param op given only when checking post-operands (otherwise null), to mask out anything op-dependent
 		 */
 		virtual void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzAnalysisOp *op = nullptr) const;
+		virtual void AdjustRegContentsFromTrace(const std::string &tracename, RzBitVector *trace_val, RzBitVector *extra_info, RzAnalysisOp *op = nullptr) const;
 
 		/**
 		 * \brief Edit the contents of a register from RzReg before comparison
