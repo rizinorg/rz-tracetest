@@ -400,6 +400,10 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	rz_list_foreach (vm->vm->events, it, evtp) {
 		RzILEvent *ev = (RzILEvent *)evtp;
 		bool justified = false;
+		if (adapter->IgnoreEvent(ev)) {
+			justified = true;
+			continue;
+		}
 		switch (ev->type) {
 		case RZ_IL_EVENT_VAR_READ: {
 			auto check_oplist = [&](const ::google::protobuf::RepeatedPtrField<::operand_info> &l) {
