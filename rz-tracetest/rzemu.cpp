@@ -86,8 +86,25 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 	return false;
 }
 
+void RizinEmulator::SetMem(SerializedTrace::TraceContainerReader &trace) {
+	trace.seek(0);
+	rz_io_cache_reset(core->io, RZ_PERM_R | RZ_PERM_W);
+	while (!trace.end_of_trace()) {
+		std::unique_ptr<frame> frame = trace.get_frame();
+		if (!frame || !frame->has_std_frame()) {
+			continue;
+		}
+		const std_frame &sf = frame.get()->std_frame();
+		ut64 pc = sf.address();
+		const uint8_t *data = (const ut8 *)sf.rawbytes().data();
+		ut32 size = sf.rawbytes().size();
+		rz_io_write_at(core->io, pc, data, size);
+	}
+	trace.seek(0);
+}
+
 FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet,
-	std::optional<std::function<bool(const std::string &)>> skip_by_disasm) {
+	std::optional<std::function<bool(const std::string &)>> skip_by_disasm, bool cache_reset) {
 	if (!f->has_std_frame()) {
 		printf("Non-std frame, can't deal with this (yet)\n");
 		return FrameCheckResult::Unimplemented;
@@ -171,11 +188,16 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	//////////////////////////////////////////
 	// Set up pre-state
 
-	// effects of ops should only depend on the operands given explicitly in the frame, so reset everything.
-	rz_io_cache_reset(io, RZ_PERM_R | RZ_PERM_W);
+	// If cache_reset = true effects of ops should only depend on
+	// the operands given explicitly in the frame, so reset everything.
+	// If false, the disassembler needs the bytes at the neighboring
+	// memory locations. So they are written once and not reset here.
+	if (cache_reset) {
+		rz_io_cache_reset(io, RZ_PERM_R | RZ_PERM_W);
+		rz_io_write_at(io, sf.address(), (const ut8 *)code.data(), code.size());
+	}
 	rz_reg_arena_zero(reg.get(), RZ_REG_TYPE_ANY);
 
-	rz_io_write_at(io, sf.address(), (const ut8 *)code.data(), code.size());
 	for (const auto &o : sf.operand_pre_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
