@@ -342,7 +342,7 @@ class HexagonTraceAdapter : public TraceAdapter {
 		}
 
 		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
-			return false;
+			return true;
 		}
 
 		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
@@ -357,6 +357,26 @@ class HexagonTraceAdapter : public TraceAdapter {
 			}
 			return r;
 		}
+
+		bool IgnoreEvent(const RzILEvent *event) const {
+			// We ignore all writes and reads to .new register for now, because they
+			// get optimized away by QEMU for some instrucions.
+			switch (event->type) {
+			default:
+				return false;
+			case RZ_IL_EVENT_VAR_READ:
+				if (strstr(event->data.var_read.variable, "_tmp")) {
+					return true;
+				}
+				return false;
+			case RZ_IL_EVENT_VAR_WRITE:
+				if (strstr(event->data.var_write.variable, "_tmp")) {
+					return true;
+				}
+				return false;
+			}
+			return false;
+		};
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {

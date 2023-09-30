@@ -95,6 +95,15 @@ class TraceAdapter {
 		virtual bool IgnoreUnknownReg(const std::string &rz_reg_name) const;
 
 		/**
+		 * \brief Checks if the given even can be ignored during checks.
+		 *
+		 * \param event The trace event to check.
+		 * \return true If the given event should be treated as justified.
+		 * \return false If the given event should be treated as any other event.
+		 */
+		virtual bool IgnoreEvent(const RzILEvent *event) const { return false; };
+
+		/**
 		 * If this returns true, assignments to a variable with the same value as the variable had before
 		 * will be justified even if they are not recorded as post operands.
 		 */
