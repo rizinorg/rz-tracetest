@@ -7,7 +7,7 @@
 #include <regex>
 
 static int help(bool verbose) {
-	printf("Usage: rz-tracetest [-dbeurmphiv] [-c count] [-o offset] [-s regex] <filename>.frames\n");
+	printf("Usage: rz-tracetest [-dbeurmphivn] [-c count] [-o offset] [-s regex] <filename>.frames\n");
 	if (verbose) {
 		printf(" -c [count]    number of frames to check, default: all\n");
 		printf(" -d            dump trace as text, but do not run or test anything\n");
@@ -17,6 +17,7 @@ static int help(bool verbose) {
 		printf(" -r            fail early/stop at the first runtime error\n");
 		printf(" -m            fail early/stop at the first execution mismatch\n");
 		printf(" -p            prettify IL outputs\n");
+		printf(" -n            no io cache reset. Bytes of all frames will be written once and won't be reset for every frame.\n");
 		printf(" -h            show help message\n");
 		printf(" -i            do not print unlifted instructions verbosely\n");
 		printf(" -o [offset]   index of the first frame to check, default: 0\n");
@@ -37,11 +38,12 @@ int main(int argc, const char *argv[]) {
 	bool fail_misexec = false;
 	bool big_endian = false;
 	bool prettify_il = false;
+	bool cache_reset = true;
 	int verbose = 0;
 	std::optional<std::regex> skip_re;
 
 	RzGetopt opt;
-	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idbvs:eurmp");
+	rz_getopt_init(&opt, argc, (const char **)argv, "hc:o:idbvs:eurmpn");
 	int c;
 
 	while ((c = rz_getopt_next(&opt)) != -1) {
@@ -77,6 +79,9 @@ int main(int argc, const char *argv[]) {
 			break;
 		case 'p':
 			prettify_il = true;
+			break;
+		case 'n':
+			cache_reset = false;
 			break;
 		case 's':
 			if (skip_re) {
@@ -116,10 +121,14 @@ int main(int argc, const char *argv[]) {
 		return 0;
 	}
 	RizinEmulator r(std::move(adapter));
+	if (!cache_reset) {
+		r.SetMem(trace);
+	}
 	r.SetPrettyIL(prettify_il);
 	trace.seek(offset);
 	ut64 stats[FRAME_CHECK_RESULT_COUNT] = {};
 	std::unique_ptr<frame> cur_frame = trace.get_frame();
+
 	ut64 total = 0;
 	while (cur_frame && !rz_cons_is_breaked() && count) {
 		std::unique_ptr<frame> next_frame = trace.end_of_trace() ? nullptr : trace.get_frame();
@@ -127,7 +136,7 @@ int main(int argc, const char *argv[]) {
 		if (next_frame && next_frame->has_std_frame()) {
 			next_pc = next_frame->std_frame().address();
 		}
-		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, verbose, invalid_op_quiet, skip_by_disasm);
+		auto res = r.RunFrame(offset++, cur_frame.get(), next_pc, verbose, invalid_op_quiet, skip_by_disasm, cache_reset);
 		stats[static_cast<int>(res)]++;
 		count--;
 		total++;

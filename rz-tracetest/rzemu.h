@@ -63,10 +63,11 @@ class RizinEmulator {
 	public:
 		RizinEmulator(std::unique_ptr<TraceAdapter> adapter);
 		FrameCheckResult RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet,
-			std::optional<std::function<bool(const std::string &)>> skip_by_disasm);
+			std::optional<std::function<bool(const std::string &)>> skip_by_disasm, bool cache_reset=true);
 		void SetPrettyIL(bool value) {
 			this->prettify_il = value;
 		}
+		void SetMem(SerializedTrace::TraceContainerReader &trace);
 };
 
 #endif
