@@ -64,7 +64,7 @@ static void DumpStdFrame(const std_frame &frame, ut64 index, RzAsm *rzasm, Trace
 			printf("    ");
 			if (strchr(disasm_trimmed, '\n')) {
 				// Asm string with multiple lines.
-				// Start disassembly to next line.
+				// Start disassembly next line.
 				printf("\n");
 			}
 			printf("%s", disasm);
