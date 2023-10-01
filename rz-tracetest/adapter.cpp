@@ -342,7 +342,7 @@ class HexagonTraceAdapter : public TraceAdapter {
 		}
 
 		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
-			return true;
+			return false;
 		}
 
 		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
