@@ -423,6 +423,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		RzILEvent *ev = (RzILEvent *)evtp;
 		bool justified = false;
 		if (adapter->IgnoreEvent(ev)) {
+			evi++;
 			justified = true;
 			continue;
 		}
