@@ -189,9 +189,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	// Set up pre-state
 
 	// If cache_reset = true effects of ops should only depend on
-	// the operands given explicitly in the frame, so reset everything.
+	// the operands and bytes given explicitly in the frame.
+	// For this case we reset here everything.
 	// If false, the disassembler needs the bytes at the neighboring
-	// memory locations. So they are written once and not reset here.
+	// memory locations. So they are written once when loading the trace
+	// and don't get reset here.
 	if (cache_reset) {
 		rz_io_cache_reset(io, RZ_PERM_R | RZ_PERM_W);
 		rz_io_write_at(io, sf.address(), (const ut8 *)code.data(), code.size());
