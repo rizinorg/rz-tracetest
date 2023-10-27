@@ -86,6 +86,12 @@ class TraceAdapter {
 		virtual bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const;
 
 		/**
+		 * Return true If a mismatch between the io mem and the memop can be ignored.
+		 * The memop still gets checked for justified events.
+		 */
+		virtual bool IgnoreCompareMemMismatch() const { return false; }
+
+		/**
 		 * \brief Returns if a given register name from the trace should be ignored if it isn't implemented in Rizin.
 		 *
 		 * \param rz_reg_name The trace register name.
