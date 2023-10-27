@@ -157,6 +157,17 @@ int main(int argc, const char *argv[]) {
 	}
 
 	printf("\n--------------------------------------\n");
+	bool all_succeeded = true;
+	for (int i = 0; i < FRAME_CHECK_RESULT_COUNT; i++) {
+		if (static_cast<FrameCheckResult>(i) == FrameCheckResult::Success) {
+			continue;
+		}
+		if (stats[i] > 0) {
+			all_succeeded = false;
+			break;
+		}
+	}
+
 	for (int i = 0; i < FRAME_CHECK_RESULT_COUNT; i++) {
 		switch (static_cast<FrameCheckResult>(i)) {
 		case FrameCheckResult::Success:
@@ -182,7 +193,11 @@ int main(int argc, const char *argv[]) {
 			break;
 		}
 		float percent = 100.0f * (float)stats[i] / (float)total;
-		printf("%-7" PFMT64u " %5.1f%%\n", stats[i], percent);
+		if (!all_succeeded && static_cast<FrameCheckResult>(i) == FrameCheckResult::Success && percent > 99.98f) {
+			// Never print 100% if a single test failed.
+			percent = 99.99f;
+		}
+		printf("%-7" PFMT64u " %5.2f%%\n", stats[i], percent);
 	}
 
 	return 0;
