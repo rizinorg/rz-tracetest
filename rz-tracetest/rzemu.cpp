@@ -387,6 +387,9 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			rz_bv_free(tbv);
 			rz_bv_free(rbv);
 		} else if (o.operand_info_specific().has_mem_operand()) {
+			if (adapter->IgnoreCompareMemMismatch()) {
+				continue;
+			}
 			const auto &mo = o.operand_info_specific().mem_operand();
 			ut64 size = MemOperandSizeBytes(o);
 			std::vector<ut8> actual(size);

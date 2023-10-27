@@ -358,6 +358,12 @@ class HexagonTraceAdapter : public TraceAdapter {
 			return r;
 		}
 
+		bool IgnoreCompareMemMismatch() const override {
+			// Dual stores won't get recognized because every memop gets compared.
+			// Although we would need to combine both.
+			return true;
+		}
+
 		bool IgnoreEvent(const RzILEvent *event) const {
 			// We ignore all writes and reads to .new register for now, because they
 			// get optimized away by QEMU for some instrucions.
