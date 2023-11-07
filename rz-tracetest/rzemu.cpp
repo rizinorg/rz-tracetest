@@ -113,7 +113,8 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	RzIO *io = core->io;
 
 	const std_frame &sf = f->std_frame();
-	const std::string &code = sf.rawbytes();
+	const uint8_t *code_data = (const uint8_t *)sf.rawbytes().data();
+	const uint32_t code_size = sf.rawbytes().length();
 
 	int need_bits = adapter->RizinBits(sf.has_mode() ? std::make_optional(sf.mode()) : std::nullopt, adapter->GetMachine());
 	if (need_bits && need_bits != core->rasm->bits) {
@@ -133,10 +134,10 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		disasm = Disasm();
 		RzAsmOp asmop = {};
 		core->rasm->pc = sf.address();
-		disasm->failed = !code.size() || rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) <= 0;
+		disasm->failed = !code_size || rz_asm_disassemble(core->rasm, &asmop, code_data, code_size) <= 0;
 		if (!disasm->failed) {
 			disasm->disasm_str = rz_strbuf_get(&asmop.buf_asm);
-			char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
+			char *hex = rz_hex_bin2strdup(code_data, code_size);
 			disasm->hex_str = hex;
 			rz_mem_free(hex);
 		}
@@ -165,7 +166,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		print_disasm();
 	}
 
-	if (!code.size()) {
+	if (!code_size) {
 		print_disasm();
 		printf("no code supplied.\n");
 		return FrameCheckResult::InvalidOp;
@@ -196,7 +197,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	// and don't get reset here.
 	if (cache_reset) {
 		rz_io_cache_reset(io, RZ_PERM_R | RZ_PERM_W);
-		rz_io_write_at(io, sf.address(), (const ut8 *)code.data(), code.size());
+		rz_io_write_at(io, sf.address(), code_data, code_size);
 	}
 	rz_reg_arena_zero(reg.get(), RZ_REG_TYPE_ANY);
 
@@ -242,7 +243,8 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	std::unique_ptr<RzAnalysisOp, std::function<void(RzAnalysisOp *)>> aop(rz_analysis_op_new(), [](RzAnalysisOp *op) {
 		rz_analysis_op_free(op);
 	});
-	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), (const ut8 *)code.data(), code.size(), RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
+
+	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), code_data, code_size, RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
 		if (!invalid_op_quiet) {
 			print_disasm();
 			printf("rz_analysis_op() failed\n");
