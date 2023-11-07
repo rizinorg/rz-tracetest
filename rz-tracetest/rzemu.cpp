@@ -103,6 +103,28 @@ void RizinEmulator::SetMem(SerializedTrace::TraceContainerReader &trace) {
 	trace.seek(0);
 }
 
+/// Returns a map of registers in the post-operand list and
+/// how often they are in there.
+std::map<std::string, int> RizinEmulator::get_post_op_map(const std_frame &sf) {
+	std::map<std::string, int> duplicate_map{};
+	for (const auto &o : sf.operand_post_list().elem()) {
+		if (!o.operand_info_specific().has_reg_operand()) {
+			continue;
+		}
+		const auto &ro = o.operand_info_specific().reg_operand();
+		auto reg_name = adapter->TraceRegToRizin(ro.name());
+		if (reg_name.empty()) {
+			continue;
+		}
+		if (duplicate_map.find(reg_name) != duplicate_map.end()) {
+			duplicate_map[reg_name] += 1;
+		} else {
+			duplicate_map.emplace(reg_name, 1);
+		}
+	}
+	return duplicate_map;
+}
+
 FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet,
 	std::optional<std::function<bool(const std::string &)>> skip_by_disasm, bool cache_reset) {
 	if (!f->has_std_frame()) {
@@ -353,6 +375,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	// fallback if next program counter not specified explicitly in post operands: fallthrough to next instruction
 	ut64 pc_expect = next_pc.value_or(sf.address() + sf.rawbytes().length());
 	std::string pc_tracename = pc_ri->name;
+	std::map<std::string, int> post_op_map = get_post_op_map(sf);
 
 	for (const auto &o : sf.operand_post_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
@@ -376,7 +399,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 				pc_tracename = ro.name();
 				pc_expect = rz_bv_to_ut64(tbv);
 			}
-			if (!rz_bv_eq(tbv, rbv)) {
+			if (!rz_bv_eq(tbv, rbv) && (post_op_map[rn] <= 1)) {
 				mismatched();
 				char *ts = rz_bv_as_hex_string(tbv, true);
 				char *rs = rz_bv_as_hex_string(rbv, true);
@@ -385,6 +408,10 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 				printf("  got      %8s = %s\n", ri->name, rs);
 				rz_mem_free(ts);
 				rz_mem_free(rs);
+			} else {
+				// Check if it this reg exists more than once in the post-op list.
+				// If yes allow mismatches until the last operand in the list is reached.
+				post_op_map[rn] -= 1;
 			}
 			rz_bv_free(tbv);
 			rz_bv_free(rbv);
