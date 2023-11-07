@@ -68,6 +68,7 @@ class RizinEmulator {
 			this->prettify_il = value;
 		}
 		void SetMem(SerializedTrace::TraceContainerReader &trace);
+		std::map<std::string, int> get_post_op_map(const std_frame &sf);
 };
 
 #endif
