@@ -379,10 +379,17 @@ class HexagonTraceAdapter : public TraceAdapter {
 				if (strstr(event->data.var_write.variable, "_tmp")) {
 					return true;
 				}
+				if (strstr(event->data.var_write.variable, "C4")) {
+					// Ignore writes to C4 P3:0 since QEMU only writes
+					// to each predicate reg separately and never to C4.
+					// Because it is onlt an alias.
+					return true;
+				}
 				return false;
 			}
 			return false;
 		};
+
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
