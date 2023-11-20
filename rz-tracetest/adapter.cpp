@@ -385,6 +385,13 @@ class HexagonTraceAdapter : public TraceAdapter {
 					// Because it is onlt an alias.
 					return true;
 				}
+				if (strstr(event->data.var_write.variable, "C1")) {
+					// Ignore writes to LC0 where old == new value.
+					// The tcg code chains blocks together and the LC0 value
+					// we cannot trace the C1 writes in this case.
+					// So these are ignored.
+					return rz_il_value_eq(event->data.var_write.old_value, event->data.var_write.new_value);
+				}
 				return false;
 			}
 			return false;
