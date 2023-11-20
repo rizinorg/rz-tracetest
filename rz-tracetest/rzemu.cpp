@@ -87,6 +87,8 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 }
 
 void RizinEmulator::SetMem(SerializedTrace::TraceContainerReader &trace) {
+	printf("Write frame bytes to memory...\n");
+	uint64_t i = 0;
 	trace.seek(0);
 	rz_io_cache_reset(core->io, RZ_PERM_R | RZ_PERM_W);
 	while (!trace.end_of_trace()) {
@@ -99,8 +101,10 @@ void RizinEmulator::SetMem(SerializedTrace::TraceContainerReader &trace) {
 		const uint8_t *data = (const ut8 *)sf.rawbytes().data();
 		ut32 size = sf.rawbytes().size();
 		rz_io_write_at(core->io, pc, data, size);
+		printf("\rFrame: %d", i++);
 	}
 	trace.seek(0);
+	printf("\nDONE Write frame bytes to memory...\n");
 }
 
 /// Returns a map of registers in the post-operand list and
