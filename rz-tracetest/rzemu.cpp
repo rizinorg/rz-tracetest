@@ -349,12 +349,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		printf("\n");
 
 		printf(Color_GREEN "IL EVENTS:" Color_RESET "\n");
-		RzListIter *it;
 		void *evtp;
 		uint64_t i = 0;
-		rz_list_foreach (vm->vm->events, it, evtp) {
+		rz_vector_foreach (&vm->vm->events->v, evtp) {
 			printf("  ");
-			PrintEvent(i++, (RzILEvent *)evtp);
+			PrintEvent(i++, (RzILEvent *) evtp);
 		}
 		printf("\n");
 
@@ -453,12 +452,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	}
 
 	// vm -> trace: try to find a valid explanation (justification) in the trace for every event that happened
-	RzListIter *it;
 	void *evtp;
 	uint64_t evi = 0;
 	bool unjustified_printed = false;
-	rz_list_foreach (vm->vm->events, it, evtp) {
-		RzILEvent *ev = (RzILEvent *)evtp;
+	rz_vector_foreach (&vm->vm->events->v, evtp) {
+		RzILEvent *ev = (RzILEvent *) evtp;
 		bool justified = false;
 		if (adapter->IgnoreEvent(ev)) {
 			evi++;
