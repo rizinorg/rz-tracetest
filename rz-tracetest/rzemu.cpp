@@ -90,6 +90,11 @@ void RizinEmulator::SetMem(SerializedTrace::TraceContainerReader &trace) {
 	printf("Write frame bytes to memory...\n");
 	uint64_t i = 0;
 	trace.seek(0);
+	ut64 n = trace.get_num_frames();
+	ut64 total_written = 0;
+	// Trace which bytes were written, so we do not write them twice.
+	std::set<uint64_t> written = std::set<uint64_t>();
+
 	rz_io_cache_reset(core->io, RZ_PERM_R | RZ_PERM_W);
 	while (!trace.end_of_trace()) {
 		std::unique_ptr<frame> frame = trace.get_frame();
@@ -98,10 +103,18 @@ void RizinEmulator::SetMem(SerializedTrace::TraceContainerReader &trace) {
 		}
 		const std_frame &sf = frame.get()->std_frame();
 		ut64 pc = sf.address();
+
 		const uint8_t *data = (const ut8 *)sf.rawbytes().data();
 		ut32 size = sf.rawbytes().size();
+		float done = 100.00f * (float) i++ / (float) n;
+		printf("\rTotal frames: %lu Done: %5.2f%% (written: %lu kb)", n, done, total_written / 1000);
+
+		if (written.count(pc) != 0) {
+			continue;
+		}
+		written.emplace(pc);
 		rz_io_write_at(core->io, pc, data, size);
-		printf("\rFrame: %d", i++);
+		total_written += size;
 	}
 	trace.seek(0);
 	printf("\nDONE Write frame bytes to memory...\n");
