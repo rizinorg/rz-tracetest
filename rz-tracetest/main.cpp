@@ -129,6 +129,8 @@ int main(int argc, const char *argv[]) {
 	ut64 stats[FRAME_CHECK_RESULT_COUNT] = {};
 	std::unique_ptr<frame> cur_frame = trace.get_frame();
 
+	printf("\nCompare frames...\n");
+	ut64 n = trace.get_num_frames();
 	ut64 total = 0;
 	while (cur_frame && !rz_cons_is_breaked() && count) {
 		std::unique_ptr<frame> next_frame = trace.end_of_trace() ? nullptr : trace.get_frame();
@@ -154,7 +156,10 @@ int main(int argc, const char *argv[]) {
 			res == FrameCheckResult::PostStateMismatch) {
 			break;
 		}
+		float done = 100.00f * (float) total / (float) n;
+		printf("\rFrames: %llu Done: %5.2f%%", n, done);
 	}
+	printf("\n");
 
 	printf("\n--------------------------------------\n");
 	bool all_succeeded = true;
