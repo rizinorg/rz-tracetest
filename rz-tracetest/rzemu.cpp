@@ -86,8 +86,64 @@ static bool MemAccessJustifiedByOperands(RzBitVector *address, ut32 bits, const 
 	return false;
 }
 
+void RizinEmulator::SetMem(SerializedTrace::TraceContainerReader &trace) {
+	printf("Write frame bytes to memory...\n");
+	uint64_t i = 0;
+	trace.seek(0);
+	ut64 n = trace.get_num_frames();
+	ut64 total_written = 0;
+	// Trace which bytes were written, so we do not write them twice.
+	std::set<uint64_t> written = std::set<uint64_t>();
+
+	rz_io_cache_reset(core->io, RZ_PERM_R | RZ_PERM_W);
+	while (!trace.end_of_trace()) {
+		std::unique_ptr<frame> frame = trace.get_frame();
+		if (!frame || !frame->has_std_frame()) {
+			continue;
+		}
+		const std_frame &sf = frame.get()->std_frame();
+		ut64 pc = sf.address();
+
+		const uint8_t *data = (const ut8 *)sf.rawbytes().data();
+		ut32 size = sf.rawbytes().size();
+		float done = 100.00f * (float) i++ / (float) n;
+		printf("\rTotal frames: %lu Done: %5.2f%% (written: %lu kb)", n, done, total_written / 1000);
+
+		if (written.count(pc) != 0) {
+			continue;
+		}
+		written.emplace(pc);
+		rz_io_write_at(core->io, pc, data, size);
+		total_written += size;
+	}
+	trace.seek(0);
+	printf("\nDONE Write frame bytes to memory...\n");
+}
+
+/// Returns a map of registers in the post-operand list and
+/// how often they are in there.
+std::map<std::string, int> RizinEmulator::get_post_op_map(const std_frame &sf) {
+	std::map<std::string, int> duplicate_map{};
+	for (const auto &o : sf.operand_post_list().elem()) {
+		if (!o.operand_info_specific().has_reg_operand()) {
+			continue;
+		}
+		const auto &ro = o.operand_info_specific().reg_operand();
+		auto reg_name = adapter->TraceRegToRizin(ro.name());
+		if (reg_name.empty()) {
+			continue;
+		}
+		if (duplicate_map.find(reg_name) != duplicate_map.end()) {
+			duplicate_map[reg_name] += 1;
+		} else {
+			duplicate_map.emplace(reg_name, 1);
+		}
+	}
+	return duplicate_map;
+}
+
 FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut64> next_pc, int verbose, bool invalid_op_quiet,
-	std::optional<std::function<bool(const std::string &)>> skip_by_disasm) {
+	std::optional<std::function<bool(const std::string &)>> skip_by_disasm, bool cache_reset) {
 	if (!f->has_std_frame()) {
 		printf("Non-std frame, can't deal with this (yet)\n");
 		return FrameCheckResult::Unimplemented;
@@ -96,7 +152,8 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	RzIO *io = core->io;
 
 	const std_frame &sf = f->std_frame();
-	const std::string &code = sf.rawbytes();
+	const uint8_t *code_data = (const uint8_t *)sf.rawbytes().data();
+	const uint32_t code_size = sf.rawbytes().length();
 
 	int need_bits = adapter->RizinBits(sf.has_mode() ? std::make_optional(sf.mode()) : std::nullopt, adapter->GetMachine());
 	if (need_bits && need_bits != core->rasm->bits) {
@@ -116,10 +173,10 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		disasm = Disasm();
 		RzAsmOp asmop = {};
 		core->rasm->pc = sf.address();
-		disasm->failed = !code.size() || rz_asm_disassemble(core->rasm, &asmop, (const ut8 *)code.data(), code.size()) <= 0;
+		disasm->failed = !code_size || rz_asm_disassemble(core->rasm, &asmop, code_data, code_size) <= 0;
 		if (!disasm->failed) {
 			disasm->disasm_str = rz_strbuf_get(&asmop.buf_asm);
-			char *hex = rz_hex_bin2strdup((const ut8 *)code.data(), asmop.size);
+			char *hex = rz_hex_bin2strdup(code_data, code_size);
 			disasm->hex_str = hex;
 			rz_mem_free(hex);
 		}
@@ -148,7 +205,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		print_disasm();
 	}
 
-	if (!code.size()) {
+	if (!code_size) {
 		print_disasm();
 		printf("no code supplied.\n");
 		return FrameCheckResult::InvalidOp;
@@ -171,11 +228,18 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	//////////////////////////////////////////
 	// Set up pre-state
 
-	// effects of ops should only depend on the operands given explicitly in the frame, so reset everything.
-	rz_io_cache_reset(io, RZ_PERM_R | RZ_PERM_W);
+	// If cache_reset = true effects of ops should only depend on
+	// the operands and bytes given explicitly in the frame.
+	// For this case we reset here everything.
+	// If false, the disassembler needs the bytes at the neighboring
+	// memory locations. So they are written once when loading the trace
+	// and don't get reset here.
+	if (cache_reset) {
+		rz_io_cache_reset(io, RZ_PERM_R | RZ_PERM_W);
+		rz_io_write_at(io, sf.address(), code_data, code_size);
+	}
 	rz_reg_arena_zero(reg.get(), RZ_REG_TYPE_ANY);
 
-	rz_io_write_at(io, sf.address(), (const ut8 *)code.data(), code.size());
 	for (const auto &o : sf.operand_pre_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
 			const auto &ro = o.operand_info_specific().reg_operand();
@@ -218,7 +282,8 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	std::unique_ptr<RzAnalysisOp, std::function<void(RzAnalysisOp *)>> aop(rz_analysis_op_new(), [](RzAnalysisOp *op) {
 		rz_analysis_op_free(op);
 	});
-	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), (const ut8 *)code.data(), code.size(), RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
+
+	if (rz_analysis_op(core->analysis, aop.get(), sf.address(), code_data, code_size, RZ_ANALYSIS_OP_MASK_ALL) <= 0) {
 		if (!invalid_op_quiet) {
 			print_disasm();
 			printf("rz_analysis_op() failed\n");
@@ -297,12 +362,11 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 		printf("\n");
 
 		printf(Color_GREEN "IL EVENTS:" Color_RESET "\n");
-		RzListIter *it;
 		void *evtp;
 		uint64_t i = 0;
-		rz_list_foreach (vm->vm->events, it, evtp) {
+		rz_vector_foreach (&vm->vm->events->v, evtp) {
 			printf("  ");
-			PrintEvent(i++, (RzILEvent *)evtp);
+			PrintEvent(i++, (RzILEvent *) evtp);
 		}
 		printf("\n");
 
@@ -327,6 +391,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	// fallback if next program counter not specified explicitly in post operands: fallthrough to next instruction
 	ut64 pc_expect = next_pc.value_or(sf.address() + sf.rawbytes().length());
 	std::string pc_tracename = pc_ri->name;
+	std::map<std::string, int> post_op_map = get_post_op_map(sf);
 
 	for (const auto &o : sf.operand_post_list().elem()) {
 		if (o.operand_info_specific().has_reg_operand()) {
@@ -350,7 +415,7 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 				pc_tracename = ro.name();
 				pc_expect = rz_bv_to_ut64(tbv);
 			}
-			if (!rz_bv_eq(tbv, rbv)) {
+			if (!rz_bv_eq(tbv, rbv) && (post_op_map[rn] <= 1)) {
 				mismatched();
 				char *ts = rz_bv_as_hex_string(tbv, true);
 				char *rs = rz_bv_as_hex_string(rbv, true);
@@ -359,10 +424,17 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 				printf("  got      %8s = %s\n", ri->name, rs);
 				rz_mem_free(ts);
 				rz_mem_free(rs);
+			} else {
+				// Check if it this reg exists more than once in the post-op list.
+				// If yes allow mismatches until the last operand in the list is reached.
+				post_op_map[rn] -= 1;
 			}
 			rz_bv_free(tbv);
 			rz_bv_free(rbv);
 		} else if (o.operand_info_specific().has_mem_operand()) {
+			if (adapter->IgnoreCompareMemMismatch()) {
+				continue;
+			}
 			const auto &mo = o.operand_info_specific().mem_operand();
 			ut64 size = MemOperandSizeBytes(o);
 			std::vector<ut8> actual(size);
@@ -393,13 +465,17 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 	}
 
 	// vm -> trace: try to find a valid explanation (justification) in the trace for every event that happened
-	RzListIter *it;
 	void *evtp;
 	uint64_t evi = 0;
 	bool unjustified_printed = false;
-	rz_list_foreach (vm->vm->events, it, evtp) {
-		RzILEvent *ev = (RzILEvent *)evtp;
+	rz_vector_foreach (&vm->vm->events->v, evtp) {
+		RzILEvent *ev = (RzILEvent *) evtp;
 		bool justified = false;
+		if (adapter->IgnoreEvent(ev)) {
+			evi++;
+			justified = true;
+			continue;
+		}
 		switch (ev->type) {
 		case RZ_IL_EVENT_VAR_READ: {
 			auto check_oplist = [&](const ::google::protobuf::RepeatedPtrField<::operand_info> &l) {

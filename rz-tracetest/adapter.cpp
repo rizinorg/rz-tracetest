@@ -331,6 +331,74 @@ class GBTraceAdapter : public TraceAdapter {
 		}
 };
 
+class HexagonTraceAdapter : public TraceAdapter {
+	public:
+		std::string RizinArch() const override {
+			return "hexagon";
+		}
+
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
+			return 32;
+		}
+
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			return false;
+		}
+
+		bool IgnoreUnknownReg(const std::string &rz_reg_name) const override {
+			return false;
+		}
+
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			std::string r = tracereg.substr(0, tracereg.find("_tmp"));
+			std::transform(r.begin(), r.end(), r.begin(), ::toupper);
+			if (tracereg.find("_tmp") != std::string::npos) {
+				return r + "_tmp";
+			}
+			return r;
+		}
+
+		bool IgnoreCompareMemMismatch() const override {
+			// Dual stores won't get recognized because every memop gets compared.
+			// Although we would need to combine both.
+			return true;
+		}
+
+		bool IgnoreEvent(const RzILEvent *event) const {
+			// We ignore all writes and reads to .new register for now, because they
+			// get optimized away by QEMU for some instrucions.
+			switch (event->type) {
+			default:
+				return false;
+			case RZ_IL_EVENT_VAR_READ:
+				if (strstr(event->data.var_read.variable, "_tmp")) {
+					return true;
+				}
+				return false;
+			case RZ_IL_EVENT_VAR_WRITE:
+				if (strstr(event->data.var_write.variable, "_tmp")) {
+					return true;
+				}
+				if (strstr(event->data.var_write.variable, "C4")) {
+					// Ignore writes to C4 P3:0 since QEMU only writes
+					// to each predicate reg separately and never to C4.
+					// Because it is onlt an alias.
+					return true;
+				}
+				if (strstr(event->data.var_write.variable, "C1")) {
+					// Ignore writes to LC0 where old == new value.
+					// The tcg code chains blocks together and the LC0 value
+					// we cannot trace the C1 writes in this case.
+					// So these are ignored.
+					return rz_il_value_eq(event->data.var_write.old_value, event->data.var_write.new_value);
+				}
+				return false;
+			}
+			return false;
+		};
+
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 	case frame_arch_6502:
@@ -347,6 +415,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 		return std::unique_ptr<TraceAdapter>(new MipsTraceAdapter());
 	case frame_arch_sm83:
 		return std::unique_ptr<TraceAdapter>(new GBTraceAdapter());
+	case frame_arch_hexagon:
+		return std::unique_ptr<TraceAdapter>(new HexagonTraceAdapter());
 	default:
 		return nullptr;
 	}
