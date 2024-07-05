@@ -399,6 +399,29 @@ class HexagonTraceAdapter : public TraceAdapter {
 
 };
 
+class X86TraceAdapter : public TraceAdapter {
+	std::string RizinArch() const override {
+		return "x86";
+	}
+
+	std::string RizinCPU() const override {
+		return "x86";
+	}
+
+	int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
+		if (mode) {
+			return (mode.value() == FRAME_MODE_X86_64) ? 64 : 32;
+		}
+		return machine.value();
+	}
+
+	virtual std::string TraceRegToRizin(const std::string &tracereg) const override {
+		std::string r = tracereg;
+		std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+		return r;
+	}
+};
+
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 	switch (arch) {
 	case frame_arch_6502:
@@ -417,6 +440,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch) {
 		return std::unique_ptr<TraceAdapter>(new GBTraceAdapter());
 	case frame_arch_hexagon:
 		return std::unique_ptr<TraceAdapter>(new HexagonTraceAdapter());
+	case frame_arch_i386:
+		return std::unique_ptr<TraceAdapter>(new X86TraceAdapter());
 	default:
 		return nullptr;
 	}
