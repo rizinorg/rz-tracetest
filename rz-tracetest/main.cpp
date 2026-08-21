@@ -116,7 +116,9 @@ int main(int argc, const char *argv[]) {
 		throw RizinException("Failed to match frame_architecture %d to TraceAdapter.\n", (int)trace.get_arch());
 	}
 	adapter->SetMachine(trace.get_machine());
-	adapter.get()->SetIsBigEndian(big_endian);
+	if (big_endian) {
+		adapter->SetIsBigEndian(true);
+	}
 	if (dump_only) {
 		DumpTrace(trace, offset, count, verbose, adapter.get());
 		return 0;
@@ -162,7 +164,7 @@ int main(int argc, const char *argv[]) {
 			res == FrameCheckResult::PostStateMismatch) {
 			break;
 		}
-		float done = 100.00f * (float) total / (float) n;
+		float done = 100.00f * (float)total / (float)n;
 		printf("\rFrames: %llu Done: %5.2f%%", n, done);
 	}
 	printf("\n");

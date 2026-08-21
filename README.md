@@ -201,6 +201,15 @@ Works with TCG tracing plugin
 | Hexagon      | Yes                   |
 | PPC          | No - register and endian mismatches |
 | ARM          | No - Cannot trace cpu modes |
+| M68K         | Yes - requires a nonzero M68K frame machine value |
+
+M68K traces are 32-bit and big-endian. Supported frame machine values select
+Rizin CPUs `68000`, `68010`, `68020`, `68030`, `68040`, `68060`, `cfv2`, or
+`cfv4e`. QEMU `m5206` and `m5208` select `cfv2`; `cfv4e` and the synthetic
+`any` model select `cfv4e`. Unknown and unspecified M68K machine values are
+rejected. QEMU's 96-bit floating-point register representation is normalized
+against Rizin's 80-bit representation with the QEMU alignment padding fixed
+to zero.
 
 
 ## Troubleshooting

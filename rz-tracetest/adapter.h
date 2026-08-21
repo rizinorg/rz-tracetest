@@ -17,11 +17,11 @@
 #define PPC_XER_ISA2_BITS_MASK 0xfffffffffff3ffff
 
 struct reg_name_mapping {
-	const char *qemu;
-	const char *rz;
+		const char *qemu;
+		const char *rz;
 };
 
-static struct reg_name_mapping hexagon_reg_mapping[] {
+static struct reg_name_mapping hexagon_reg_mapping[]{
 	{ .qemu = "r00", .rz = "R0" },
 	{ .qemu = "r01", .rz = "R1" },
 	{ .qemu = "r02", .rz = "R2" },
@@ -103,6 +103,12 @@ class TraceAdapter {
 		 * value for asm.cpu
 		 */
 		virtual std::string RizinCPU() const;
+
+		/**
+		 * Override rzil.step.events.halt_on_exc before constructing the VM.
+		 * An empty string preserves Rizin's default configuration.
+		 */
+		virtual std::string RizinHaltOnExceptions() const { return ""; }
 
 		/**
 		 * \brief Returns the bits for asm.bits.
@@ -251,12 +257,16 @@ class TraceAdapter {
 
 		void SetMachine(uint64_t machine) { this->machine = machine; }
 
-		uint64_t GetMachine() { return this->machine; }
+		uint64_t GetMachine() const { return this->machine; }
 
 	private:
 		bool big_endian = false;
 		uint64_t machine = 0;
 };
+
+RzBitVector *M68KQemuFPRegisterToRizin(const RzBitVector *qemu_value);
+RzBitVector *M68KRizinFPRegisterToQemu(const RzBitVector *rizin_value, size_t qemu_bits = 96);
+bool M68KRizinFloatsEquivalent(const RzBitVector *expected, const RzBitVector *actual, size_t qemu_bits);
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch, size_t mach);
 
