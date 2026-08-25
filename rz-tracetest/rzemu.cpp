@@ -5,6 +5,24 @@
 #include "dump.h"
 #include "trace.h"
 
+#include <algorithm>
+
+static std::vector<ut8> TraceMemoryToTarget(const std::string &value, bool big_endian) {
+	std::vector<ut8> result(value.begin(), value.end());
+	if (big_endian) {
+		std::reverse(result.begin(), result.end());
+	}
+	return result;
+}
+
+static std::vector<ut8> TargetMemoryToTrace(const std::vector<ut8> &value, bool big_endian) {
+	std::vector<ut8> result(value);
+	if (big_endian) {
+		std::reverse(result.begin(), result.end());
+	}
+	return result;
+}
+
 RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg)
     : adapter(std::move(adapter_arg)),
       core(rz_core_new(), rz_core_free),
@@ -26,6 +44,10 @@ RizinEmulator::RizinEmulator(std::unique_ptr<TraceAdapter> adapter_arg)
 	int bits = adapter->RizinBits(std::nullopt, adapter->GetMachine());
 	if (bits) {
 		rz_config_set_i(core->config, "asm.bits", bits);
+	}
+	auto halt_on_exceptions = adapter->RizinHaltOnExceptions();
+	if (!halt_on_exceptions.empty()) {
+		rz_config_set(core->config, "rzil.step.events.halt_on_exc", halt_on_exceptions.c_str());
 	}
 	rz_config_set_b(core->config, "cfg.bigendian", adapter->IsBigEndian());
 	reg->big_endian = adapter->IsBigEndian();
@@ -295,7 +317,8 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			rz_bv_free(bv);
 		} else if (o.operand_info_specific().has_mem_operand()) {
 			const auto &mo = o.operand_info_specific().mem_operand();
-			rz_io_write_at(io, mo.address(), (const ut8 *)o.value().data(), MemOperandSizeBytes(o));
+			std::vector<ut8> target_value = TraceMemoryToTarget(o.value(), adapter->IsBigEndian());
+			rz_io_write_at(io, mo.address(), target_value.data(), target_value.size());
 		} else {
 			print_disasm();
 			printf("No or unknown operand type\n");
@@ -486,10 +509,12 @@ FrameCheckResult RizinEmulator::RunFrame(ut64 index, frame *f, std::optional<ut6
 			ut64 size = MemOperandSizeBytes(o);
 			std::vector<ut8> actual(size);
 			rz_io_read_at_mapped(io, mo.address(), actual.data(), size);
-			if (memcmp(actual.data(), o.value().data(), size)) {
+			std::vector<ut8> expected = TraceMemoryToTarget(o.value(), adapter->IsBigEndian());
+			if (actual != expected) {
 				mismatched();
 				char *ts = rz_hex_bin2strdup((const ut8 *)o.value().data(), size);
-				char *rs = rz_hex_bin2strdup(actual.data(), size);
+				std::vector<ut8> normalized_actual = TargetMemoryToTrace(actual, adapter->IsBigEndian());
+				char *rs = rz_hex_bin2strdup(normalized_actual.data(), size);
 				printf(Color_RED "MISMATCH" Color_RESET " post memory:\n");
 				printf("  expected [0x%04" PFMT64x "] = %s\n", (ut64)mo.address(), ts);
 				printf("  got      [0x%04" PFMT64x "] = %s\n", (ut64)mo.address(), rs);
