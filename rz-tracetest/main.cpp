@@ -4,6 +4,7 @@
 #include "rzemu.h"
 #include "dump.h"
 
+#include <cinttypes>
 #include <regex>
 #include <rz_util/rz_set.h>
 
@@ -117,6 +118,10 @@ int main(int argc, const char *argv[]) {
 	}
 	adapter->SetMachine(trace.get_machine());
 	adapter.get()->SetIsBigEndian(big_endian);
+	const meta_frame *meta = trace.get_meta();
+	if (meta && meta->has_isa()) {
+		adapter->SetISA(meta->isa());
+	}
 	if (dump_only) {
 		DumpTrace(trace, offset, count, verbose, adapter.get());
 		return 0;

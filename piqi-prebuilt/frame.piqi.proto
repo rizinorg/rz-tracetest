@@ -133,6 +133,7 @@ message meta_frame {
     required string user = 4;
     required string host = 5;
     required double time = 6;
+    optional string isa = 7;
 }
 
 message tracer {

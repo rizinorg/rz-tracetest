@@ -253,9 +253,12 @@ class TraceAdapter {
 
 		uint64_t GetMachine() { return this->machine; }
 
+		void SetISA(const std::string &isa) { this->isa = isa; }
+
 	private:
 		bool big_endian = false;
 		uint64_t machine = 0;
+		std::string isa;
 };
 
 std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch, size_t mach);

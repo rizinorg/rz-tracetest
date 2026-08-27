@@ -21,7 +21,7 @@ static inline bool IsOneBitFlag(const std::string &tn) {
 }
 
 std::string TraceAdapter::RizinCPU() const {
-	return std::string();
+	return isa;
 }
 
 int TraceAdapter::RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const {
@@ -789,7 +789,42 @@ class TriCoreTraceAdapter : public TraceAdapter {
 		};
 };
 
-std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch, size_t mach) {
+class RiscVTraceAdapter : public TraceAdapter {
+		std::string RizinArch() const override {
+			return "riscv";
+		}
+
+		int RizinBits(std::optional<std::string> mode, std::optional<uint64_t> machine) const override {
+			return machine && machine.value() == frame_mach_riscv64 ? 64 : 32;
+		}
+
+		bool IgnorePCMismatch(ut64 pc_actual, ut64 pc_expect) const override {
+			return false;
+		}
+
+		std::string TraceRegToRizin(const std::string &tracereg) const override {
+			if (tracereg == "frm") {
+				return std::string();
+			}
+			// TODO: width mismatch between QEMU traces and Rizin (128 vs. 512), and V-extension instructions unhandled in lifter still
+			if (tracereg.size() >= 2 && tracereg[0] == 'v' && std::isdigit(tracereg[1])) {
+				return std::string();
+			}
+			if (tracereg == "fp") {
+				return "s0";
+			}
+			std::string r = tracereg;
+			std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+			return r;
+		}
+
+		bool IgnoreUnknownReg(const std::string &trace_reg_name) const override { return true; }
+
+		bool AllowNoOperandSameValueAssignment() const override { return true; }
+};
+
+std::unique_ptr<TraceAdapter>
+SelectTraceAdapter(frame_architecture arch, size_t mach) {
 	switch (arch) {
 	case frame_arch_6502:
 		return std::unique_ptr<TraceAdapter>(new VICETraceAdapter());
@@ -821,6 +856,8 @@ std::unique_ptr<TraceAdapter> SelectTraceAdapter(frame_architecture arch, size_t
 		adapter->SetIsBigEndian(mach == frame_mach_sparc_sparclite_le ? false : true);
 		return adapter;
 	}
+	case frame_arch_riscv:
+		return std::unique_ptr<TraceAdapter>(new RiscVTraceAdapter());
 	default:
 		return nullptr;
 	}
